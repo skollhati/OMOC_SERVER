@@ -7,10 +7,7 @@
 
 #ifndef __NETWORKPROCESS_H__
 #define __NETWORKPROCESS_H__
-
-
 #define BUFFER_SIZE 1024
-
 
 #include "stdafx.h"
 #include <queue>
@@ -22,11 +19,15 @@ typedef struct PLAY_GAME_PLAYER
 	sockaddr user2_sock;
 }PlayingGame;
 
-UINT WINAPI SendProc(LPVOID lParam);
-UINT WINAPI RecvProc(LPVOID lParam);
+typedef struct SEDING_TASK
+{
+	sockaddr from_sock;
+	TCHAR* send_message;
+}MESSAGE;
 
 class NetworkProcess
 {
+
 public:
 	NetworkProcess();
 	
@@ -41,30 +42,35 @@ public:
 	void ConnectPlayer(sockaddr* sock);
 	void PassCommand(TCHAR command[]);
 	BOOL SearchPlayerList(sockaddr* sock);
+
 public:
 	WSADATA wsaData;
 	SOCKET ServerSocket;
 	SOCKADDR_IN ServerInfo;
 	SOCKADDR_IN FromClient;
-
+	
 
 	int Recv_Size;
 	int Send_Size;
 	int FromClient_Size;
 	int Count;
 
-	char Buffer[BUFFER_SIZE];
+	TCHAR Buffer[BUFFER_SIZE];
 	short ServerPort = 8800;
 
 private:
-	
+	static UINT WINAPI SendProc(LPVOID lParam);
+	static UINT WINAPI RecvProc(LPVOID lParam);
 
 private:
+
 	queue<sockaddr*> qWaitingPlayer;
+	queue<MESSAGE> qMessage;
 	list<sockaddr*> lPlayerList;
 	list<PlayingGame> lGameList;
 	
 	HANDLE hSendThread;
 	HANDLE hRecvThread;
 };
+
 #endif
