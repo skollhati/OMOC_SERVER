@@ -59,8 +59,8 @@ public:
 	short ServerPort = 8800;
 
 private:
-	static UINT WINAPI SendProc(LPVOID lParam);
-	static UINT WINAPI RecvProc(LPVOID lParam);
+	//static UINT WINAPI SendProc(LPVOID lParam);
+	//static UINT WINAPI RecvProc(LPVOID lParam);
 
 private:
 

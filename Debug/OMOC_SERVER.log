@@ -1,4 +1,6 @@
 ﻿  NetworkProcess.cpp
+c:\users\kimchanyong\documents\omoc_server\stdafx.h(4): warning C4005: 'UNICODE': 매크로 재정의
+  c:\users\kimchanyong\documents\omoc_server\stdafx.h(4): note: 명령줄 인수: 'UNICODE'의 이전 정의를 참조하십시오.
 c:\users\kimchanyong\documents\omoc_server\networkprocess.h(67): error C2143: 구문 오류: ';'이(가) '<' 앞에 없습니다.
 c:\users\kimchanyong\documents\omoc_server\networkprocess.h(67): error C4430: 형식 지정자가 없습니다. int로 가정합니다. 참고: C++에서는 기본 int를 지원하지 않습니다.
 c:\users\kimchanyong\documents\omoc_server\networkprocess.h(67): error C2238: ';' 앞에 예기치 않은 토큰이 있습니다.
@@ -11,6 +13,12 @@ c:\users\kimchanyong\documents\omoc_server\networkprocess.h(69): error C2238: ';
 c:\users\kimchanyong\documents\omoc_server\networkprocess.h(70): error C2143: 구문 오류: ';'이(가) '<' 앞에 없습니다.
 c:\users\kimchanyong\documents\omoc_server\networkprocess.h(70): error C4430: 형식 지정자가 없습니다. int로 가정합니다. 참고: C++에서는 기본 int를 지원하지 않습니다.
 c:\users\kimchanyong\documents\omoc_server\networkprocess.h(70): error C2238: ';' 앞에 예기치 않은 토큰이 있습니다.
+c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(43): error C2039: 'SendProc': 'NetworkProcess'의 멤버가 아닙니다.
+  c:\users\kimchanyong\documents\omoc_server\networkprocess.h(29): note: 'NetworkProcess' 선언을 참조하십시오.
+c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(43): error C2065: 'SendProc': 선언되지 않은 식별자입니다.
+c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(44): error C2039: 'RecvProc': 'NetworkProcess'의 멤버가 아닙니다.
+  c:\users\kimchanyong\documents\omoc_server\networkprocess.h(29): note: 'NetworkProcess' 선언을 참조하십시오.
+c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(44): error C2065: 'RecvProc': 선언되지 않은 식별자입니다.
 c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(23): error C4996: 'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
   c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1850): note: 'inet_addr' 선언을 참조하십시오.
 c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(50): error C2065: 'lPlayerList': 선언되지 않은 식별자입니다.
@@ -19,21 +27,3 @@ c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(50): error C2228: 
 c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(51): error C2065: 'lPlayerList': 선언되지 않은 식별자입니다.
 c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(51): error C2228: '.end' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
   c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(51): note: 'unknown-type' 형식입니다.
-c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(66): error C2511: 'UINT NetworkProcess::SendProc(void)': 오버로드된 멤버 함수가 'NetworkProcess'에 없습니다.
-  c:\users\kimchanyong\documents\omoc_server\networkprocess.h(29): note: 'NetworkProcess' 선언을 참조하십시오.
-c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(76): error C2511: 'UINT NetworkProcess::RecvProc(void)': 오버로드된 멤버 함수가 'NetworkProcess'에 없습니다.
-  c:\users\kimchanyong\documents\omoc_server\networkprocess.h(29): note: 'NetworkProcess' 선언을 참조하십시오.
-c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(79): error C2597: 비정적 멤버 'NetworkProcess::FromClient_Size'에 대한 참조가 잘못되었습니다.
-c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(81): error C2597: 비정적 멤버 'NetworkProcess::ServerSocket'에 대한 참조가 잘못되었습니다.
-c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(81): error C2597: 비정적 멤버 'NetworkProcess::Buffer'에 대한 참조가 잘못되었습니다.
-c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(81): error C2597: 비정적 멤버 'NetworkProcess::FromClient'에 대한 참조가 잘못되었습니다.
-c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(81): error C2440: '형식 캐스팅': 'SOCKADDR_IN NetworkProcess::* '에서 'sockaddr *'(으)로 변환할 수 없습니다.
-  c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(81): note: 이 변환이 가능한 컨텍스트가 없습니다.
-c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(81): error C2597: 비정적 멤버 'NetworkProcess::FromClient_Size'에 대한 참조가 잘못되었습니다.
-c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(83): error C2597: 비정적 멤버 'NetworkProcess::Recv_Size'에 대한 참조가 잘못되었습니다.
-c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(83): error C3867: 'NetworkProcess::Recv_Size': 비표준 구문입니다. '&'를 사용하여 멤버 포인터를 만드세요.
-c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(88): error C2228: '.sin_addr' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
-c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(89): error C2597: 비정적 멤버 'NetworkProcess::Buffer'에 대한 참조가 잘못되었습니다.
-c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(91): error C2597: 비정적 멤버 'NetworkProcess::FromClient'에 대한 참조가 잘못되었습니다.
-c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(91): error C2440: '형식 캐스팅': 'SOCKADDR_IN NetworkProcess::* '에서 'sockaddr *'(으)로 변환할 수 없습니다.
-  c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(91): note: 이 변환이 가능한 컨텍스트가 없습니다.
