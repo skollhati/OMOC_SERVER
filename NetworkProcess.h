@@ -14,6 +14,8 @@
 #include <list>
 #include "PacketSet.h"
 
+static int iHeartCount = 0;
+
 typedef struct PLAY_GAME_PLAYER
 {
 	sockaddr user1_sock;
@@ -41,6 +43,7 @@ public:
 
 public:
 	void ConnectPlayer(PSOCKET_OBJ p_sock,TCHAR* buf);
+	void StartServer();
 	void CommandProcess(PSOCKET_OBJ p_sock,TCHAR* buf);
 	BOOL SendPacket(SOCKET ClientSocket, WORD com, TCHAR* buf);
 	void InitateHeartBeat();
@@ -87,7 +90,7 @@ private:
 	LARGE_INTEGER liDueTime;
 	
 
-	static int iHeartCount = 0;
+	;
 	static PacketSet pPacket;
 	
 };

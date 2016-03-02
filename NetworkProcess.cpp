@@ -33,20 +33,9 @@ NetworkProcess::NetworkProcess()
 		exit(0);
 	}
 
-	if (bind(ServerSocket, (struct sockaddr*)&ServerInfo, sizeof(ServerInfo)) == SOCKET_ERROR)
-	{
-		cout << "bind fault" << endl;
-		closesocket(ServerSocket);
-		WSACleanup();
-		exit(0);
-	}
 
-	liDueTime.QuadPart = -100000000;
-	hHeartTimer = CreateWaitableTimer(NULL, FALSE, NULL);
-	SetWaitableTimer(hHeartTimer, &liDueTime, 10000, NULL, NULL, FALSE);
 
-	hHeartBeat = (HANDLE)_beginthreadex(NULL, 0, NetworkProcess::CheckingHeartBeatThread, (LPVOID)this, 0, NULL);
-	hRecvThread = (HANDLE)_beginthreadex(NULL, 0, NetworkProcess::RecvProc, (LPVOID)this, 0, NULL);
+
 }
 
 void NetworkProcess::InitateHeartBeat()
@@ -65,27 +54,47 @@ UINT WINAPI NetworkProcess::CheckingHeartBeatThread(LPVOID lpParam)
 
 		for (itor = pNet->lPlayerList.begin(); itor != pNet->lPlayerList.end(); itor++)
 		{
-			if (iHeartCount == 0)
+			if ((*itor)->bOnOff)
 			{
-				if (!(*itor)->bHeartBeat[0])
+				if (iHeartCount == 0)
 				{
-					pNet->Disconnect(*itor);
+					if (!(*itor)->bHeartBeat[0])
+					{
+						pNet->Disconnect(*itor);
+					}
+
+					iHeartCount = 1;
 				}
-				
-				iHeartCount = 1;
-			}
-			else if (iHeartCount == 1)
-			{
-				if (!(*itor)->bHeartBeat[1])
+				else if (iHeartCount == 1)
 				{
-					pNet->Disconnect(*itor);
+					if (!(*itor)->bHeartBeat[1])
+					{
+						pNet->Disconnect(*itor);
+					}
+					iHeartCount = 0;
 				}
-				iHeartCount = 0;
 			}
 		}
 	}
-
 	return 0;
+}
+
+void NetworkProcess::StartServer()
+{
+	if (bind(ServerSocket, (struct sockaddr*)&ServerInfo, sizeof(ServerInfo)) == SOCKET_ERROR)
+	{
+		cout << "bind fault" << endl;
+		closesocket(ServerSocket);
+		WSACleanup();
+		exit(0);
+	}
+
+	liDueTime.QuadPart = -100000000;
+	hHeartTimer = CreateWaitableTimer(NULL, FALSE, NULL);
+	SetWaitableTimer(hHeartTimer, &liDueTime, 10000, NULL, NULL, FALSE);
+
+	hHeartBeat = (HANDLE)_beginthreadex(NULL, 0, NetworkProcess::CheckingHeartBeatThread, (LPVOID)this, 0, NULL);
+	hRecvThread = (HANDLE)_beginthreadex(NULL, 0, NetworkProcess::RecvProc, (LPVOID)this, 0, NULL);
 }
 
 void NetworkProcess::IniSocketObj()
@@ -101,9 +110,7 @@ void NetworkProcess::IniSocketObj()
 			PLAY_GAME_DATA *pGame = new PLAY_GAME_DATA();
 			lGameList.push_back(pGame);
 		}
-
 	}
-
 }
 
 WORD NetworkProcess::CheckUserNum(char* ipAddr, int iPort)
@@ -247,7 +254,7 @@ void NetworkProcess::CommandProcess(PSOCKET_OBJ p_sock, TCHAR* buf)
 	switch (pPacket.GetWORD())
 	{
 
-	case USER_IN: ConnectPlayer(p_sock, pPacket.GetStr());//처음 접속, 대기열 큐 등록
+	case USER_IN: CheckHeartBeat(p_sock); ConnectPlayer(p_sock, pPacket.GetStr());//처음 접속, 대기열 큐 등록
 		break;
 
 	case USER_OUT: Disconnect(p_sock);//접속 종료 프로세스

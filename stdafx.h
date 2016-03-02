@@ -35,6 +35,7 @@ typedef struct XY {
 
 typedef struct SOCKET_DATA
 {
+	BOOL bHeartBeat[2] = { 1, };
 	WORD wUserNum;
 	char ipAddr[30];
 	int iPort;
