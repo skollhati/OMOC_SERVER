@@ -46,7 +46,7 @@ typedef struct PLAY_GAME_DATA
 {
 	BOOL use_obj = false;
 	PSOCKET_OBJ player1;
-	PSOCKET_OBJ plyaer2;
+	PSOCKET_OBJ player2;
 
 	TCHAR player1_name[50];
 	TCHAR player2_name[50];

@@ -8,10 +8,10 @@ using namespace std;
 
 NetworkProcess::NetworkProcess()
 {
-	
+
 	if (WSAStartup(0x202, &wsaData) == SOCKET_ERROR)	//문제발생 예외처리
 	{
-		cout << "SOCKET Initialize Error" << endl;		
+		cout << "SOCKET Initialize Error" << endl;
 		WSACleanup();									//ws2_32.lib 사용 종료
 	}
 
@@ -24,7 +24,7 @@ NetworkProcess::NetworkProcess()
 	ServerInfo.sin_port = htons(ServerPort);
 
 	ServerSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	
+
 	if (ServerSocket == INVALID_SOCKET)
 	{
 		cout << "socket creation fault!" << endl;
@@ -40,19 +40,49 @@ NetworkProcess::NetworkProcess()
 		WSACleanup();
 		exit(0);
 	}
+
+	liDueTime.QuadPart = -100000000;
+	hHeartTimer = CreateWaitableTimer(NULL, FALSE, NULL);
+	SetWaitableTimer(hHeartTimer, &liDueTime, 10000, NULL, NULL, FALSE);
+
 	hHeartBeat = (HANDLE)_beginthreadex(NULL, 0, NetworkProcess::CheckingHeartBeatThread, (LPVOID)this, 0, NULL);
 	hRecvThread = (HANDLE)_beginthreadex(NULL, 0, NetworkProcess::RecvProc, (LPVOID)this, 0, NULL);
-	
 }
 
+void NetworkProcess::InitateHeartBeat()
+{
+	CancelWaitableTimer(hHeartTimer);
+}
 
 UINT WINAPI NetworkProcess::CheckingHeartBeatThread(LPVOID lpParam)
 {
-	NetworkProcess* pNproc = (NetworkProcess *)lpParam;
-
+	NetworkProcess * pNet = (NetworkProcess*)lpParam;
+	vector<PSOCKET_OBJ>::iterator itor;
 	while (1)
 	{
-		
+
+		WaitForSingleObject(pNet->hHeartTimer, INFINITE);
+
+		for (itor = pNet->lPlayerList.begin(); itor != pNet->lPlayerList.end(); itor++)
+		{
+			if (iHeartCount == 0)
+			{
+				if (!(*itor)->bHeartBeat[0])
+				{
+					pNet->Disconnect(*itor);
+				}
+				
+				iHeartCount = 1;
+			}
+			else if (iHeartCount == 1)
+			{
+				if (!(*itor)->bHeartBeat[1])
+				{
+					pNet->Disconnect(*itor);
+				}
+				iHeartCount = 0;
+			}
+		}
 	}
 
 	return 0;
@@ -73,7 +103,7 @@ void NetworkProcess::IniSocketObj()
 		}
 
 	}
-	offset_game = 0;
+
 }
 
 WORD NetworkProcess::CheckUserNum(char* ipAddr, int iPort)
@@ -136,10 +166,10 @@ UINT WINAPI NetworkProcess::RecvProc(LPVOID lpParam)
 			cout << "recvfrom() error" << endl;
 		}
 
-	/*	cout << "packet arrival send client is" << inet_ntoa(FromClient.sin_addr) << endl;
-		cout << "packet data" << Buffer << endl;*/
-		
-		//strcpy(t_SocketOBJ->ipAddr, inet_ntoa(pNproc->FromClient.sin_addr));
+		/*	cout << "packet arrival send client is" << inet_ntoa(FromClient.sin_addr) << endl;
+			cout << "packet data" << Buffer << endl;*/
+
+			//strcpy(t_SocketOBJ->ipAddr, inet_ntoa(pNproc->FromClient.sin_addr));
 		char* ipAddr = inet_ntoa(pNproc->FromClient.sin_addr);
 		PSOCKET_OBJ temp_sock = pNproc->InUserVector(ipAddr);
 
@@ -151,12 +181,12 @@ UINT WINAPI NetworkProcess::RecvProc(LPVOID lpParam)
 	return 0;
 }
 
-void NetworkProcess::ConnectPlayer(PSOCKET_OBJ p_sock,TCHAR* buf)
+void NetworkProcess::ConnectPlayer(PSOCKET_OBJ p_sock, TCHAR* buf)
 {
 	if (qWaiting.size() != 0)
 	{
-		qWaiting.front()->plyaer2 = p_sock;
-		_tcscpy(qWaiting.front()->player2_name,buf);
+		qWaiting.front()->player2 = p_sock;
+		_tcscpy(qWaiting.front()->player2_name, buf);
 		qWaiting.pop();
 	}
 	else
@@ -166,7 +196,7 @@ void NetworkProcess::ConnectPlayer(PSOCKET_OBJ p_sock,TCHAR* buf)
 		{
 			if (!(*itor)->use_obj)
 			{
-				_tcscpy((*itor)->player1_name,buf);
+				_tcscpy((*itor)->player1_name, buf);
 				(*itor)->player1 = p_sock;
 				(*itor)->use_obj = true;
 				qWaiting.push(*itor);
@@ -186,78 +216,122 @@ void NetworkProcess::Disconnect(PSOCKET_OBJ p_SockObj)
 	}
 }
 
-void NetworkProcess::PassCommand(PSOCKET_OBJ p_sock,TCHAR* buf)
+void NetworkProcess::PassCommand(PSOCKET_OBJ p_sock, TCHAR* buf)
 {
-	
+	SOCKADDR_IN temp_sock;
+
+	list<PLAY_GAME_DATA*>::iterator itor;
+	for (itor = lGameList.begin(); itor != lGameList.end(); itor++)
+	{
+		if (strcmp((*itor)->player1->ipAddr, p_sock->ipAddr) == 0)
+		{
+
+			SendPassPacket((*itor)->player2, buf);
+			break;
+		}
+		else if (strcmp((*itor)->player2->ipAddr, p_sock->ipAddr) == 0)
+		{
+
+			SendPassPacket((*itor)->player1, buf);
+			break;
+		}
+	}
 }
 
-void NetworkProcess::CommandProcess(PSOCKET_OBJ p_sock,TCHAR* buf)
+
+
+void NetworkProcess::CommandProcess(PSOCKET_OBJ p_sock, TCHAR* buf)
 {
 	pPacket.GetInit(buf);
-	
+
 	switch (pPacket.GetWORD())
 	{
 
-	case USER_IN: ConnectPlayer(p_sock,pPacket.GetStr());//처음 접속, 대기열 큐 등록
+	case USER_IN: ConnectPlayer(p_sock, pPacket.GetStr());//처음 접속, 대기열 큐 등록
 		break;
 
 	case USER_OUT: Disconnect(p_sock);//접속 종료 프로세스
 		break;
 
-	case GAME_COMMAND: // 전달 프로세스
+	case GAME_COMMAND: PassCommand(p_sock, buf);// 전달 프로세스
+		break;
+	case HEARTBEAT: CheckHeartBeat(p_sock);
 		break;
 	}
 }
 
-BOOL NetworkProcess::SendPacket(SOCKET ClientSocket,WORD com, TCHAR* buf)
+void NetworkProcess::CheckHeartBeat(PSOCKET_OBJ p_sock)
 {
-	pPacket.Init();
-	pPacket.PutWORD(com);
-	pPacket.PutStr(Buffer);
-	pPacket.PutSize();
-
-
-//	Send_Size = sendto(ClientSocket, (const char*)Buffer, BUFFER_SIZE, 0, (struct sockaddr*)&ToServer, sizeof(ToServer));
-
-	if (Send_Size == pPacket.m_iLen)
+	if (iHeartCount == 0)
 	{
-		return true;
+		p_sock->bHeartBeat[0] = true;
+		p_sock->bHeartBeat[1] = false;
 	}
-
-	return false;
+	else if (iHeartCount == 1)
+	{
+		p_sock->bHeartBeat[0] = false;
+		p_sock->bHeartBeat[1] = true;
+	}
 }
 
-UNPACK_DATA NetworkProcess::UDPReceive(WORD UserNum, TCHAR* buffer, WORD wSize)
+void NetworkProcess::SendPassPacket(PSOCKET_OBJ Client, TCHAR* buf)
 {
-	pPacket.GetInit(buffer);
-	UNPACK_DATA m_Unpack;
-
-	//사이즈에 맞게 온 함수일 경우 차례대로 진행 아닐 경우 무시
-	if (pPacket.GetSize() == wSize)
-	{
-		switch (pPacket.GetWORD())
-		{
-		//case MATCHING_GAME:
-		//	//선공 후공(0,1) + 상대 아이디
-		//	MATCHING match_game = *(MATCHING *)pPacket.GetStr();
-		//	pGameProc->setGame(match_game);
-		//	SetEvent(pGameProc->hEvent);
-		//	break;
-
-		//case GAME_COMMAND:
-		//	XY temp_xy = strToXY(pPacket.GetStr());
-		//	pGameProc->RivalStoneInput(temp_xy.y, temp_xy.x);
-		//	break;
-
-		//case GAME_INFO:
-		//	//승패
-		//	//게임 결과 유저정보 갱신 (상대편 정보도 표시)
-		//	break;
-		}
-
-	}
-	else
-		m_Unpack = { 0, };
-
-	return m_Unpack;
+	SOCKADDR_IN ToClient;
+	ToClient.sin_family = AF_INET;
+	ToClient.sin_addr.s_addr = inet_addr(Client->ipAddr);
+	ToClient.sin_port = Client->iPort;
+	Send_Size = sendto(ServerSocket, (const char*)buf, BUFFER_SIZE, 0, (struct sockaddr*)&ToClient, sizeof(ToClient));
 }
+
+//BOOL NetworkProcess::SendPacket(SOCKADDR_IN ToClient,WORD com, TCHAR* buf)
+//{
+//	pPacket.Init();
+//	pPacket.PutWORD(com);
+//	pPacket.PutStr(buf);
+//	pPacket.PutSize();
+//
+//
+//	Send_Size = sendto(ServerSocket, (const char*)pPacket.GetSendBuffer(), BUFFER_SIZE, 0, (struct sockaddr*)&ToClient, sizeof(ToClient));
+//
+//	if (Send_Size == pPacket.m_iLen)
+//	{
+//		return true;
+//	}
+//
+//	return false;
+//}
+
+//UNPACK_DATA NetworkProcess::UDPReceive(WORD UserNum, TCHAR* buffer, WORD wSize)
+//{
+//	pPacket.GetInit(buffer);
+//	UNPACK_DATA m_Unpack;
+//
+//	//사이즈에 맞게 온 함수일 경우 차례대로 진행 아닐 경우 무시
+//	if (pPacket.GetSize() == wSize)
+//	{
+//		switch (pPacket.GetWORD())
+//		{
+//		//case MATCHING_GAME:
+//		//	//선공 후공(0,1) + 상대 아이디
+//		//	MATCHING match_game = *(MATCHING *)pPacket.GetStr();
+//		//	pGameProc->setGame(match_game);
+//		//	SetEvent(pGameProc->hEvent);
+//		//	break;
+//
+//		//case GAME_COMMAND:
+//		//	XY temp_xy = strToXY(pPacket.GetStr());
+//		//	pGameProc->RivalStoneInput(temp_xy.y, temp_xy.x);
+//		//	break;
+//
+//		//case GAME_INFO:
+//		//	//승패
+//		//	//게임 결과 유저정보 갱신 (상대편 정보도 표시)
+//		//	break;
+//		}
+//
+//	}
+//	else
+//		m_Unpack = { 0, };
+//
+//	return m_Unpack;
+//}

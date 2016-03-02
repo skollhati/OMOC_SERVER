@@ -86,6 +86,12 @@ TCHAR* PacketSet::GetStr()
 	return sStr;
 }
 
+
+TCHAR* PacketSet::GetSendBuffer() const
+{
+	return (TCHAR *)m_szBuffr;
+}
+
 //TCHAR* PacketSet::PackedPacket(TCHAR message[], WORD command)
 //{
 //	

@@ -43,6 +43,9 @@ public:
 	void ConnectPlayer(PSOCKET_OBJ p_sock,TCHAR* buf);
 	void CommandProcess(PSOCKET_OBJ p_sock,TCHAR* buf);
 	BOOL SendPacket(SOCKET ClientSocket, WORD com, TCHAR* buf);
+	void InitateHeartBeat();
+	void CheckHeartBeat(PSOCKET_OBJ p_sock);
+	void SendPassPacket(PSOCKET_OBJ Client, TCHAR* buf);
 	void PassCommand(PSOCKET_OBJ p_sock, TCHAR* buf);
 	void Disconnect(PSOCKET_OBJ pSocktObj);
 	void IniSocketObj();
@@ -52,7 +55,7 @@ public:
 
 public:
 	WSADATA wsaData;
-	SOCKET ServerSocket;
+	static SOCKET ServerSocket;
 	SOCKADDR_IN ServerInfo;
 	SOCKADDR_IN FromClient;
 	
@@ -76,12 +79,15 @@ private:
 	list<PLAY_GAME_DATA*> lGameList;
 	queue<MESSAGE> qMessage;
 	vector<PSOCKET_OBJ> lPlayerList;
-	//list<PlayingGame> lGameList;
-	PLAY_GAME_DATA pGame[50];
+	
 	HANDLE hHeartBeat;
+	HANDLE hHeartTimer;
 	HANDLE hRecvThread;
+	
 	LARGE_INTEGER liDueTime;
-	int offset_game=0;
+	
+
+	static int iHeartCount = 0;
 	static PacketSet pPacket;
 	
 };

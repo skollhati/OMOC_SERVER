@@ -45,6 +45,7 @@ public:
 	TCHAR*	GetStr(void);
 	WORD	GetSize(void);
 
+	TCHAR* GetSendBuffer(void) const;
 
 	int		m_iLen;
 
