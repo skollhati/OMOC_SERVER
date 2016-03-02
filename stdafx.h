@@ -17,6 +17,7 @@
 #include<vector>
 #include<conio.h>
 #include <queue>
+
 #define USER_IN 1				//서버 접속에 사용
 #define USER_OUT 4				//서버 로그아웃에 사용
 #define MATCHING_GAME 7			//대전 상대와 게임을 한다는 것을 알림
@@ -41,10 +42,14 @@ typedef struct SOCKET_DATA
 	bool bOnOff;
 }*PSOCKET_OBJ;
 
-typedef struct MATCHING
+typedef struct PLAY_GAME_DATA
 {
-	bool fPlay;
-	TCHAR rivalName[50];
+	BOOL use_obj = false;
+	PSOCKET_OBJ player1;
+	PSOCKET_OBJ plyaer2;
+
+	TCHAR player1_name[50];
+	TCHAR player2_name[50];
 };
 
 typedef struct UNPACK_DATA
@@ -52,7 +57,6 @@ typedef struct UNPACK_DATA
 	WORD com;
 	TCHAR *buf;
 };
-#include "PacketSet.h"
 
 
 

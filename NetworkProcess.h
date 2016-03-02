@@ -12,6 +12,7 @@
 #include "stdafx.h"
 #include <queue>
 #include <list>
+#include "PacketSet.h"
 
 typedef struct PLAY_GAME_PLAYER
 {
@@ -39,9 +40,11 @@ public:
 	}
 
 public:
-	void ConnectPlayer(sockaddr* sock);
+	void ConnectPlayer(PSOCKET_OBJ p_sock,TCHAR* buf);
+	void CommandProcess(PSOCKET_OBJ p_sock,TCHAR* buf);
 	BOOL SendPacket(SOCKET ClientSocket, WORD com, TCHAR* buf);
-	BOOL SearchPlayerList(PSOCKET_OBJ m_socketObj);
+	void PassCommand(PSOCKET_OBJ p_sock, TCHAR* buf);
+	void Disconnect(PSOCKET_OBJ pSocktObj);
 	void IniSocketObj();
 	WORD CheckUserNum(char* ipAddr, int iPort);
 	PSOCKET_OBJ InUserVector(char* ipAddr);
@@ -69,17 +72,18 @@ private:
 
 private:
 
-	queue<PSOCKET_OBJ> qWaitingPlayer;
+	queue<PLAY_GAME_DATA*> qWaiting;
+	list<PLAY_GAME_DATA*> lGameList;
 	queue<MESSAGE> qMessage;
 	vector<PSOCKET_OBJ> lPlayerList;
-	list<PlayingGame> lGameList;
-	
+	//list<PlayingGame> lGameList;
+	PLAY_GAME_DATA pGame[50];
 	HANDLE hHeartBeat;
 	HANDLE hRecvThread;
 	LARGE_INTEGER liDueTime;
-
+	int offset_game=0;
 	static PacketSet pPacket;
-
+	
 };
 
 #endif

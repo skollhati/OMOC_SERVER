@@ -45,23 +45,6 @@ NetworkProcess::NetworkProcess()
 	
 }
 
-//ip를 받아와서 존재하면 진행하고 존재하지 않으면 새로 할당을 한다.
-BOOL NetworkProcess::SearchPlayerList(PSOCKET_OBJ m_socketObj)
-{
-	vector<PSOCKET_OBJ>::iterator iter = lPlayerList.begin();
-	for (iter; iter != lPlayerList.end(); iter++)
-	{
-		if (strcmp((*iter)->ipAddr,m_socketObj->ipAddr) == 0)
-		{
-			return false;
-		}
-
-	}
-
-	//waiting queue 확인 절차( 있으면 매칭바로 없으면 기다리라고 전송하기)
-
-	return true;
-}
 
 UINT WINAPI NetworkProcess::CheckingHeartBeatThread(LPVOID lpParam)
 {
@@ -83,7 +66,14 @@ void NetworkProcess::IniSocketObj()
 		memset(pSocketObj, 0, sizeof(SOCKET_DATA));
 		pSocketObj->wUserNum = i;
 		lPlayerList.push_back(pSocketObj);
+		if ((i + 1) % 2 == 0)
+		{
+			PLAY_GAME_DATA *pGame = new PLAY_GAME_DATA();
+			lGameList.push_back(pGame);
+		}
+
 	}
+	offset_game = 0;
 }
 
 WORD NetworkProcess::CheckUserNum(char* ipAddr, int iPort)
@@ -134,10 +124,10 @@ PSOCKET_OBJ NetworkProcess::InUserVector(char* ipAddr)
 UINT WINAPI NetworkProcess::RecvProc(LPVOID lpParam)
 {
 	NetworkProcess* pNproc = (NetworkProcess *)lpParam;
-
+	PSOCKET_OBJ t_SocketOBJ = new SOCKET_DATA;
 	while (1)
 	{
-		pNproc->FromClient_Size = sizeof(FromClient);
+		pNproc->FromClient_Size = sizeof(pNproc->FromClient);
 
 		pNproc->Recv_Size = recvfrom(pNproc->ServerSocket, (char*)pNproc->Buffer, BUFFER_SIZE, 0, (struct sockaddr*)&(pNproc->FromClient), &(pNproc->FromClient_Size));
 
@@ -148,24 +138,76 @@ UINT WINAPI NetworkProcess::RecvProc(LPVOID lpParam)
 
 	/*	cout << "packet arrival send client is" << inet_ntoa(FromClient.sin_addr) << endl;
 		cout << "packet data" << Buffer << endl;*/
-
-		if (pNproc->SearchPlayerList((PSOCKET_OBJ)&(pNproc->FromClient)))
-		{
-			// 대전상대 매칭까지 기다리라고 메시지 보내기 or 대전상대 매칭 됐다고 보내고 게임 진행
-		}
-		else
-		{
-			//커맨드 전달하기
-		}
+		
+		//strcpy(t_SocketOBJ->ipAddr, inet_ntoa(pNproc->FromClient.sin_addr));
+		char* ipAddr = inet_ntoa(pNproc->FromClient.sin_addr);
+		PSOCKET_OBJ temp_sock = pNproc->InUserVector(ipAddr);
 
 
-		//////////////test 할것//////////////////
+		pNproc->CommandProcess(temp_sock, pNproc->Buffer);
 
 
 	}
 	return 0;
 }
 
+void NetworkProcess::ConnectPlayer(PSOCKET_OBJ p_sock,TCHAR* buf)
+{
+	if (qWaiting.size() != 0)
+	{
+		qWaiting.front()->plyaer2 = p_sock;
+		_tcscpy(qWaiting.front()->player2_name,buf);
+		qWaiting.pop();
+	}
+	else
+	{
+		list<PLAY_GAME_DATA*>::iterator itor;
+		for (itor = lGameList.begin(); itor != lGameList.end(); itor++)
+		{
+			if (!(*itor)->use_obj)
+			{
+				_tcscpy((*itor)->player1_name,buf);
+				(*itor)->player1 = p_sock;
+				(*itor)->use_obj = true;
+				qWaiting.push(*itor);
+				break;
+			}
+		}
+	}
+}
+
+void NetworkProcess::Disconnect(PSOCKET_OBJ p_SockObj)
+{
+	//게임 객체 찾아서 지우기 작업 해야함
+	if (p_SockObj->bOnOff != 0)
+	{
+		memset(p_SockObj->ipAddr, 0, sizeof(p_SockObj->ipAddr));
+		p_SockObj->bOnOff = 0;
+	}
+}
+
+void NetworkProcess::PassCommand(PSOCKET_OBJ p_sock,TCHAR* buf)
+{
+	
+}
+
+void NetworkProcess::CommandProcess(PSOCKET_OBJ p_sock,TCHAR* buf)
+{
+	pPacket.GetInit(buf);
+	
+	switch (pPacket.GetWORD())
+	{
+
+	case USER_IN: ConnectPlayer(p_sock,pPacket.GetStr());//처음 접속, 대기열 큐 등록
+		break;
+
+	case USER_OUT: Disconnect(p_sock);//접속 종료 프로세스
+		break;
+
+	case GAME_COMMAND: // 전달 프로세스
+		break;
+	}
+}
 
 BOOL NetworkProcess::SendPacket(SOCKET ClientSocket,WORD com, TCHAR* buf)
 {

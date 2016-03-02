@@ -1,5 +1,5 @@
+
 #include "PacketSet.h"
-#include "stdafx.h"
 
 void PacketSet::Init()
 {
