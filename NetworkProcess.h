@@ -40,8 +40,12 @@ public:
 
 public:
 	void ConnectPlayer(sockaddr* sock);
-	void PassCommand(TCHAR command[]);
-	BOOL SearchPlayerList(sockaddr* sock);
+	BOOL SendPacket(SOCKET ClientSocket, WORD com, TCHAR* buf);
+	BOOL SearchPlayerList(PSOCKET_OBJ m_socketObj);
+	void IniSocketObj();
+	WORD CheckUserNum(char* ipAddr, int iPort);
+	PSOCKET_OBJ InUserVector(char* ipAddr);
+	UNPACK_DATA UDPReceive(WORD UserNum, TCHAR* buffer, WORD wSize);
 
 public:
 	WSADATA wsaData;
@@ -59,18 +63,23 @@ public:
 	short ServerPort = 8800;
 
 private:
-	//static UINT WINAPI SendProc(LPVOID lParam);
-	//static UINT WINAPI RecvProc(LPVOID lParam);
+	
+	static UINT WINAPI RecvProc(LPVOID lParam);
+	static UINT WINAPI CheckingHeartBeatThread(LPVOID lpParam);
 
 private:
 
-	queue<sockaddr*> qWaitingPlayer;
+	queue<PSOCKET_OBJ> qWaitingPlayer;
 	queue<MESSAGE> qMessage;
-	list<sockaddr*> lPlayerList;
+	vector<PSOCKET_OBJ> lPlayerList;
 	list<PlayingGame> lGameList;
 	
-	HANDLE hSendThread;
+	HANDLE hHeartBeat;
 	HANDLE hRecvThread;
+	LARGE_INTEGER liDueTime;
+
+	static PacketSet pPacket;
+
 };
 
 #endif
