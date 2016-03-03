@@ -2,7 +2,7 @@
 #define __STDAFX_H__
 
 
-
+#include "locale.h"
 #include <WinSock2.h>
 
 #include <stdio.h>

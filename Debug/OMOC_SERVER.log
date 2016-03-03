@@ -1,30 +1,19 @@
 ﻿  NetworkProcess.cpp
-c:\users\kimchanyong\documents\omoc_server\stdafx.h(53): warning C4091: 'typedef ': 변수를 선언하지 않으면 'PLAY_GAME_DATA' 왼쪽은 무시됩니다.
-c:\users\kimchanyong\documents\omoc_server\stdafx.h(59): warning C4091: 'typedef ': 변수를 선언하지 않으면 'UNPACK_DATA' 왼쪽은 무시됩니다.
-c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(23): warning C4996: 'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+c:\users\kimchanyong\documents\omoc_server\stdafx.h(63): warning C4091: 'typedef ': 변수를 선언하지 않으면 'PLAY_GAME_DATA' 왼쪽은 무시됩니다.
+c:\users\kimchanyong\documents\omoc_server\stdafx.h(69): warning C4091: 'typedef ': 변수를 선언하지 않으면 'UNPACK_DATA' 왼쪽은 무시됩니다.
+c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(24): warning C4996: 'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
   c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1850): note: 'inet_addr' 선언을 참조하십시오.
-c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(92): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(119): note: 'strcpy' 선언을 참조하십시오.
-c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(150): warning C4996: 'inet_ntoa': Use inet_ntop() or InetNtop() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(143): warning C4996: 'inet_ntoa': Use inet_ntop() or InetNtop() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
   c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1868): note: 'inet_ntoa' 선언을 참조하십시오.
-c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(166): warning C4996: 'wcscpy': This function or variable may be unsafe. Consider using wcscpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(164): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(119): note: 'strcpy' 선언을 참조하십시오.
+c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(208): warning C4996: 'wcscpy': This function or variable may be unsafe. Consider using wcscpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
   c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\corecrt_wstring.h(121): note: 'wcscpy' 선언을 참조하십시오.
-c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(176): warning C4996: 'wcscpy': This function or variable may be unsafe. Consider using wcscpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(224): warning C4996: 'wcscpy': This function or variable may be unsafe. Consider using wcscpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
   c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\corecrt_wstring.h(121): note: 'wcscpy' 선언을 참조하십시오.
-c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(198): warning C4101: 'temp_sock' :참조되지 않은 지역 변수입니다.
-c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(242): warning C4996: 'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(263): warning C4101: 'temp_sock' :참조되지 않은 지역 변수입니다.
+c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(395): warning C4996: 'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
   c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1850): note: 'inet_addr' 선언을 참조하십시오.
-NetworkProcess.obj : error LNK2019: __imp__bind@12 외부 기호(참조 위치: "public: __thiscall NetworkProcess::NetworkProcess(void)" (??0NetworkProcess@@QAE@XZ) 함수)에서 확인하지 못했습니다.
-NetworkProcess.obj : error LNK2019: __imp__closesocket@4 외부 기호(참조 위치: "public: __thiscall NetworkProcess::NetworkProcess(void)" (??0NetworkProcess@@QAE@XZ) 함수)에서 확인하지 못했습니다.
-NetworkProcess.obj : error LNK2019: __imp__htons@4 외부 기호(참조 위치: "public: __thiscall NetworkProcess::NetworkProcess(void)" (??0NetworkProcess@@QAE@XZ) 함수)에서 확인하지 못했습니다.
-NetworkProcess.obj : error LNK2019: __imp__inet_addr@4 외부 기호(참조 위치: "public: __thiscall NetworkProcess::NetworkProcess(void)" (??0NetworkProcess@@QAE@XZ) 함수)에서 확인하지 못했습니다.
-NetworkProcess.obj : error LNK2019: __imp__inet_ntoa@4 외부 기호(참조 위치: "private: static unsigned int __stdcall NetworkProcess::RecvProc(void *)" (?RecvProc@NetworkProcess@@CGIPAX@Z) 함수)에서 확인하지 못했습니다.
-NetworkProcess.obj : error LNK2019: __imp__recvfrom@24 외부 기호(참조 위치: "private: static unsigned int __stdcall NetworkProcess::RecvProc(void *)" (?RecvProc@NetworkProcess@@CGIPAX@Z) 함수)에서 확인하지 못했습니다.
-NetworkProcess.obj : error LNK2019: __imp__sendto@24 외부 기호(참조 위치: "public: int __thiscall NetworkProcess::SendPassPacket(struct SOCKET_DATA *,wchar_t *)" (?SendPassPacket@NetworkProcess@@QAEHPAUSOCKET_DATA@@PA_W@Z) 함수)에서 확인하지 못했습니다.
-NetworkProcess.obj : error LNK2019: __imp__socket@12 외부 기호(참조 위치: "public: __thiscall NetworkProcess::NetworkProcess(void)" (??0NetworkProcess@@QAE@XZ) 함수)에서 확인하지 못했습니다.
-NetworkProcess.obj : error LNK2019: __imp__WSAStartup@8 외부 기호(참조 위치: "public: __thiscall NetworkProcess::NetworkProcess(void)" (??0NetworkProcess@@QAE@XZ) 함수)에서 확인하지 못했습니다.
-NetworkProcess.obj : error LNK2019: __imp__WSACleanup@0 외부 기호(참조 위치: "public: __thiscall NetworkProcess::NetworkProcess(void)" (??0NetworkProcess@@QAE@XZ) 함수)에서 확인하지 못했습니다.
-NetworkProcess.obj : error LNK2001: "public: static unsigned int NetworkProcess::ServerSocket" (?ServerSocket@NetworkProcess@@2IA) 외부 기호를 확인할 수 없습니다.
-NetworkProcess.obj : error LNK2001: "private: static class PacketSet NetworkProcess::pPacket" (?pPacket@NetworkProcess@@0VPacketSet@@A) 외부 기호를 확인할 수 없습니다.
-MSVCRTD.lib(exe_main.obj) : error LNK2019: _main 외부 기호(참조 위치: "int __cdecl invoke_main(void)" (?invoke_main@@YAHXZ) 함수)에서 확인하지 못했습니다.
-C:\Users\KimChanYong\Documents\OMOC_SERVER\Debug\OMOC_SERVER.exe : fatal error LNK1120: 13개의 확인할 수 없는 외부 참조입니다.
+c:\users\kimchanyong\documents\omoc_server\networkprocess.cpp(406): warning C4996: 'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1850): note: 'inet_addr' 선언을 참조하십시오.
+  OMOC_SERVER.vcxproj -> C:\Users\KimChanYong\Documents\OMOC_SERVER\Debug\OMOC_SERVER.exe

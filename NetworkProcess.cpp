@@ -1,5 +1,6 @@
 
 #include "NetworkProcess.h"
+#pragma comment(lib,"ws2_32.lib")
 
 #define BUFFER_SIZE 1024
 
@@ -45,6 +46,7 @@ void NetworkProcess::InitateHeartBeat()
 
 UINT WINAPI NetworkProcess::CheckingHeartBeatThread(LPVOID lpParam)
 {
+	cout << "HeartBeatThread Start" << endl;
 	NetworkProcess * pNet = (NetworkProcess*)lpParam;
 	vector<PSOCKET_OBJ>::iterator itor;
 	while (1)
@@ -92,7 +94,7 @@ void NetworkProcess::StartServer()
 	liDueTime.QuadPart = -100000000;
 	hHeartTimer = CreateWaitableTimer(NULL, FALSE, NULL);
 	SetWaitableTimer(hHeartTimer, &liDueTime, 10000, NULL, NULL, FALSE);
-
+	cout << "Server Start!" << endl;
 	hHeartBeat = (HANDLE)_beginthreadex(NULL, 0, NetworkProcess::CheckingHeartBeatThread, (LPVOID)this, 0, NULL);
 	hRecvThread = (HANDLE)_beginthreadex(NULL, 0, NetworkProcess::RecvProc, (LPVOID)this, 0, NULL);
 }
@@ -113,30 +115,32 @@ void NetworkProcess::IniSocketObj()
 	}
 }
 
-WORD NetworkProcess::CheckUserNum(char* ipAddr, int iPort)
-{
-	PSOCKET_OBJ pSocket = InUserVector(ipAddr);
-
-	if (pSocket->bOnOff == 0)
-	{
-		strcpy(pSocket->ipAddr, ipAddr);
-		pSocket->bOnOff = TRUE;
-		pSocket->iPort = iPort;
-
-		return pSocket->wUserNum;
-	}
-	else if (pSocket == NULL)
-	{
-		return -1; //빈 객체가 없을때- 접속허용 용량을 벗어날때
-	}
-
-
-	return pSocket->wUserNum;
-}
+//WORD NetworkProcess::CheckUserNum(char* ipAddr, int iPort)
+//{
+//	PSOCKET_OBJ pSocket = InUserVector(ipAddr);
+//
+//	if (pSocket->bOnOff == 0)
+//	{
+//		strcpy(pSocket->ipAddr, ipAddr);
+//		pSocket->bOnOff = TRUE;
+//		pSocket->iPort = iPort;
+//
+//		return pSocket->wUserNum;
+//	}
+//	else if (pSocket == NULL)
+//	{
+//		return -1; //빈 객체가 없을때- 접속허용 용량을 벗어날때
+//	}
+//
+//
+//	return pSocket->wUserNum;
+//}
 
 //유저소켓 정보를 가진 벡터에서 같은 객체가 있는지 찾는 함수
-PSOCKET_OBJ NetworkProcess::InUserVector(char* ipAddr)
+PSOCKET_OBJ NetworkProcess::InUserVector(SOCKADDR_IN Client)
 {
+	
+	char* ipAddr = inet_ntoa(Client.sin_addr);
 
 	if (lPlayerList.size() == 0)
 		return NULL;
@@ -145,7 +149,7 @@ PSOCKET_OBJ NetworkProcess::InUserVector(char* ipAddr)
 	PSOCKET_OBJ pEmptyObj = NULL;
 	for (itor; itor != lPlayerList.end(); itor++)
 	{
-		if (!strcmp((*itor)->ipAddr, ipAddr))
+		if (strcmp((*itor)->ipAddr, ipAddr)!=0)
 		{
 			return (*itor);
 		}
@@ -155,14 +159,22 @@ PSOCKET_OBJ NetworkProcess::InUserVector(char* ipAddr)
 		}
 
 	}
+	
+	pEmptyObj->bOnOff = 1;
+	strcpy(pEmptyObj->ipAddr, ipAddr);
+	pEmptyObj->iPort = Client.sin_port;
+	
 
 	return pEmptyObj;
 }
 
+
+
 UINT WINAPI NetworkProcess::RecvProc(LPVOID lpParam)
 {
+	cout << "Recv Thread Start" << endl;
 	NetworkProcess* pNproc = (NetworkProcess *)lpParam;
-	PSOCKET_OBJ t_SocketOBJ = new SOCKET_DATA;
+	
 	while (1)
 	{
 		pNproc->FromClient_Size = sizeof(pNproc->FromClient);
@@ -178,8 +190,7 @@ UINT WINAPI NetworkProcess::RecvProc(LPVOID lpParam)
 			cout << "packet data" << Buffer << endl;*/
 
 			//strcpy(t_SocketOBJ->ipAddr, inet_ntoa(pNproc->FromClient.sin_addr));
-		char* ipAddr = inet_ntoa(pNproc->FromClient.sin_addr);
-		PSOCKET_OBJ temp_sock = pNproc->InUserVector(ipAddr);
+		PSOCKET_OBJ temp_sock = pNproc->InUserVector(pNproc->FromClient);
 
 
 		pNproc->CommandProcess(temp_sock, pNproc->Buffer);
@@ -271,12 +282,14 @@ void NetworkProcess::PassCommand(PSOCKET_OBJ p_sock, TCHAR* buf)
 
 void NetworkProcess::CommandProcess(PSOCKET_OBJ p_sock, TCHAR* buf)
 {
+	_tprintf(_T("%s"),buf);
 	pPacket.GetInit(buf);
 
 	switch (pPacket.GetWORD())
 	{
 
-	case USER_IN: CheckHeartBeat(p_sock); ConnectPlayer(p_sock, pPacket.GetStr());//상대방의 정보를 서로에게 전달
+	case USER_IN: //리스트에 포함되지 않은 소켓 포함시키기
+		CheckHeartBeat(p_sock); ConnectPlayer(p_sock, pPacket.GetStr());//상대방의 정보를 서로에게 전달
 		break;
 
 	case USER_OUT: Disconnect(p_sock);//접속 종료 프로세스

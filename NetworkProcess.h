@@ -8,11 +8,10 @@
 #ifndef __NETWORKPROCESS_H__
 #define __NETWORKPROCESS_H__
 #define BUFFER_SIZE 1024
-
+#include "PacketSet.h"
 #include "stdafx.h"
 #include <queue>
 #include <list>
-#include "PacketSet.h"
 
 static int iHeartCount = 0;
 
@@ -52,17 +51,16 @@ public:
 	void PassCommand(PSOCKET_OBJ p_sock, TCHAR* buf);
 	void Disconnect(PSOCKET_OBJ pSocktObj);
 	void IniSocketObj();
-	
 	PLAY_GAME_DATA* SearchGameOBJ(PSOCKET_OBJ p_sock);
 
 	void RematchGame(PSOCKET_OBJ p_sock,TCHAR* buf);
-	WORD CheckUserNum(char* ipAddr, int iPort);
-	PSOCKET_OBJ InUserVector(char* ipAddr);
+	//WORD CheckUserNum(char* ipAddr, int iPort);
+	PSOCKET_OBJ InUserVector(SOCKADDR_IN Client);
 	UNPACK_DATA UDPReceive(WORD UserNum, TCHAR* buffer, WORD wSize);
 
 public:
 	WSADATA wsaData;
-	static SOCKET ServerSocket;
+	SOCKET ServerSocket;
 	SOCKADDR_IN ServerInfo;
 	SOCKADDR_IN FromClient;
 	
@@ -94,8 +92,8 @@ private:
 	LARGE_INTEGER liDueTime;
 	
 
-	;
-	static PacketSet pPacket;
+	
+	PacketSet pPacket;
 	
 };
 
