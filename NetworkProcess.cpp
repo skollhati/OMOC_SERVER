@@ -155,6 +155,7 @@ PSOCKET_OBJ NetworkProcess::InUserVector(char* ipAddr)
 		}
 
 	}
+
 	return pEmptyObj;
 }
 
@@ -194,7 +195,13 @@ void NetworkProcess::ConnectPlayer(PSOCKET_OBJ p_sock, TCHAR* buf)
 	{
 		qWaiting.front()->player2 = p_sock;
 		_tcscpy(qWaiting.front()->player2_name, buf);
+
+		SendPacket(p_sock, MATCHING_GAME, qWaiting.front()->player1_name);//매칭 성공시 대전 상대의 플레이 명 전송
+		SendPacket(qWaiting.front()->player1, MATCHING_GAME, buf);
+
+
 		qWaiting.pop();
+
 	}
 	else
 	{
@@ -209,6 +216,8 @@ void NetworkProcess::ConnectPlayer(PSOCKET_OBJ p_sock, TCHAR* buf)
 				qWaiting.push(*itor);
 				break;
 			}
+			SendPacket(p_sock, MATCHING_GAME, _T("0")); // 매칭 실패를 의미하는 0을 보냄
+
 		}
 	}
 }
@@ -220,6 +229,21 @@ void NetworkProcess::Disconnect(PSOCKET_OBJ p_SockObj)
 	{
 		memset(p_SockObj->ipAddr, 0, sizeof(p_SockObj->ipAddr));
 		p_SockObj->bOnOff = 0;
+	}
+
+	PLAY_GAME_DATA* pGameData = SearchGameOBJ(p_SockObj);
+	if (pGameData != NULL)
+	{
+		if (strcmp(pGameData->player1->ipAddr, p_SockObj->ipAddr) == 0)
+		{
+			SendPacket(pGameData->player2, GAME_RETIRE, NULL); //상대방이 기권했다고 알림
+			memset(pGameData, 0, sizeof(PLAY_GAME_DATA));
+		}
+		else if(strcmp(pGameData->player2->ipAddr, p_SockObj->ipAddr) == 0)
+		{
+			SendPacket(pGameData->player1, GAME_RETIRE, NULL); //상대방이 기권했다고 알림
+			memset(pGameData, 0, sizeof(PLAY_GAME_DATA));
+		}
 	}
 }
 
@@ -245,8 +269,6 @@ void NetworkProcess::PassCommand(PSOCKET_OBJ p_sock, TCHAR* buf)
 	}
 }
 
-
-
 void NetworkProcess::CommandProcess(PSOCKET_OBJ p_sock, TCHAR* buf)
 {
 	pPacket.GetInit(buf);
@@ -254,16 +276,88 @@ void NetworkProcess::CommandProcess(PSOCKET_OBJ p_sock, TCHAR* buf)
 	switch (pPacket.GetWORD())
 	{
 
-	case USER_IN: CheckHeartBeat(p_sock); ConnectPlayer(p_sock, pPacket.GetStr());//처음 접속, 대기열 큐 등록
+	case USER_IN: CheckHeartBeat(p_sock); ConnectPlayer(p_sock, pPacket.GetStr());//상대방의 정보를 서로에게 전달
 		break;
 
 	case USER_OUT: Disconnect(p_sock);//접속 종료 프로세스
 		break;
 
+	case GAME_REMATCH: RematchGame(p_sock, pPacket.GetStr());//rematch 벡터에 넣고 양측 정보 대기(클라이언트 측에서 10초 이내에 입력이 없을시 CANCEL 신호를 알림
+		break;
+	case GAME_RESULT: //게임 결과를 양측에서 받아서 옳은 결과가 도출되었는지 판단.
+		break;
 	case GAME_COMMAND: PassCommand(p_sock, buf);// 전달 프로세스
 		break;
 	case HEARTBEAT: CheckHeartBeat(p_sock);
 		break;
+	}
+}
+
+PLAY_GAME_DATA* NetworkProcess::SearchGameOBJ(PSOCKET_OBJ p_sock)
+{
+
+	list<PLAY_GAME_DATA*>::iterator itor;
+
+	for (itor = lGameList.begin(); itor != lGameList.end(); itor++)
+	{
+		if (strcmp((*itor)->player1->ipAddr, p_sock->ipAddr) == 0 || strcmp((*itor)->player2->ipAddr, p_sock->ipAddr) == 0)
+		{
+			return *itor;
+			break;
+		}
+	}
+
+	return NULL;
+}
+
+void NetworkProcess::RematchGame(PSOCKET_OBJ p_sock, TCHAR* buf)
+{
+	PLAY_GAME_DATA* temp_obj = SearchGameOBJ(p_sock);
+	if (_tcscmp(buf, _T("1")) == 0)
+	{
+		if (temp_obj != NULL)
+		{
+			if (strcmp(temp_obj->player1->ipAddr, p_sock->ipAddr) == 0)
+			{
+				temp_obj->rematch_1 = true;
+			}
+			else if (strcmp(temp_obj->player2->ipAddr, p_sock->ipAddr) == 0)
+			{
+				temp_obj->rematch_2 = true;
+			}
+		}
+
+		if (temp_obj->rematch_1 && temp_obj->rematch_2)
+		{
+			SendPacket(temp_obj->player1, GAME_REMATCH, _T("1"));
+			SendPacket(temp_obj->player2, GAME_REMATCH, _T("1"));
+
+			temp_obj->rematch_1 = false;
+			temp_obj->rematch_2 = false;
+
+		}
+		else
+		{
+			SendPacket(p_sock, GAME_REMATCH, _T("2")); //2는 대기하라는 뜻
+		}
+	}
+	else
+	{
+		///재대결 거부 ->  매칭 실패 알림
+		if (strcmp(temp_obj->player1->ipAddr, p_sock->ipAddr) == 0)
+		{
+			SendPacket(temp_obj->player1, GAME_REMATCH, _T("0"));
+			memset(temp_obj, 0, sizeof(PLAY_GAME_DATA));
+
+			ConnectPlayer(temp_obj->player1, temp_obj->player1_name);
+		}
+		else
+		{
+			SendPacket(temp_obj->player2, GAME_REMATCH, _T("0"));
+			memset(temp_obj, 0, sizeof(PLAY_GAME_DATA));
+
+			ConnectPlayer(temp_obj->player2, temp_obj->player2_name);
+		}
 	}
 }
 
@@ -290,23 +384,29 @@ void NetworkProcess::SendPassPacket(PSOCKET_OBJ Client, TCHAR* buf)
 	Send_Size = sendto(ServerSocket, (const char*)buf, BUFFER_SIZE, 0, (struct sockaddr*)&ToClient, sizeof(ToClient));
 }
 
-//BOOL NetworkProcess::SendPacket(SOCKADDR_IN ToClient,WORD com, TCHAR* buf)
-//{
-//	pPacket.Init();
-//	pPacket.PutWORD(com);
-//	pPacket.PutStr(buf);
-//	pPacket.PutSize();
-//
-//
-//	Send_Size = sendto(ServerSocket, (const char*)pPacket.GetSendBuffer(), BUFFER_SIZE, 0, (struct sockaddr*)&ToClient, sizeof(ToClient));
-//
-//	if (Send_Size == pPacket.m_iLen)
-//	{
-//		return true;
-//	}
-//
-//	return false;
-//}
+
+BOOL NetworkProcess::SendPacket(PSOCKET_OBJ Client, WORD com, TCHAR* buf)
+{
+
+	SOCKADDR_IN ToClient;
+	ToClient.sin_family = AF_INET;
+	ToClient.sin_addr.s_addr = inet_addr(Client->ipAddr);
+	ToClient.sin_port = Client->iPort;
+
+	pPacket.Init();
+	pPacket.PutWORD(com);
+	pPacket.PutStr(buf);
+	pPacket.PutSize();
+
+	Send_Size = sendto(ServerSocket, (const char*)pPacket.GetSendBuffer(), BUFFER_SIZE, 0, (struct sockaddr*)&ToClient, sizeof(ToClient));
+
+	if (Send_Size == pPacket.m_iLen)
+	{
+		return true;
+	}
+
+	return false;
+}
 
 //UNPACK_DATA NetworkProcess::UDPReceive(WORD UserNum, TCHAR* buffer, WORD wSize)
 //{

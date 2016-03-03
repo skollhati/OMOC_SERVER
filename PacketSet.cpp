@@ -86,7 +86,6 @@ TCHAR* PacketSet::GetStr()
 	return sStr;
 }
 
-
 TCHAR* PacketSet::GetSendBuffer() const
 {
 	return (TCHAR *)m_szBuffr;

@@ -45,13 +45,17 @@ public:
 	void ConnectPlayer(PSOCKET_OBJ p_sock,TCHAR* buf);
 	void StartServer();
 	void CommandProcess(PSOCKET_OBJ p_sock,TCHAR* buf);
-	BOOL SendPacket(SOCKET ClientSocket, WORD com, TCHAR* buf);
+	BOOL SendPacket(PSOCKET_OBJ Client, WORD com, TCHAR* buf);
 	void InitateHeartBeat();
 	void CheckHeartBeat(PSOCKET_OBJ p_sock);
 	void SendPassPacket(PSOCKET_OBJ Client, TCHAR* buf);
 	void PassCommand(PSOCKET_OBJ p_sock, TCHAR* buf);
 	void Disconnect(PSOCKET_OBJ pSocktObj);
 	void IniSocketObj();
+	
+	PLAY_GAME_DATA* SearchGameOBJ(PSOCKET_OBJ p_sock);
+
+	void RematchGame(PSOCKET_OBJ p_sock,TCHAR* buf);
 	WORD CheckUserNum(char* ipAddr, int iPort);
 	PSOCKET_OBJ InUserVector(char* ipAddr);
 	UNPACK_DATA UDPReceive(WORD UserNum, TCHAR* buffer, WORD wSize);
@@ -77,7 +81,7 @@ private:
 	static UINT WINAPI CheckingHeartBeatThread(LPVOID lpParam);
 
 private:
-
+	vector<PLAY_GAME_DATA*> vReMatch;
 	queue<PLAY_GAME_DATA*> qWaiting;
 	list<PLAY_GAME_DATA*> lGameList;
 	queue<MESSAGE> qMessage;
