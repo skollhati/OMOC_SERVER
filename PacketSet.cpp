@@ -82,7 +82,7 @@ TCHAR* PacketSet::GetStr()
 {
 	TCHAR* sStr = &m_rzBuffr[m_iLen];
 	m_iLen += _tcslen(sStr) + 2;
-
+	_tprintf(_T("%s\n"), sStr);
 	return sStr;
 }
 

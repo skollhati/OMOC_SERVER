@@ -41,22 +41,20 @@ public:
 	}
 
 public:
-	void ConnectPlayer(PSOCKET_OBJ p_sock,TCHAR* buf);
 	void StartServer();
-	void CommandProcess(PSOCKET_OBJ p_sock,TCHAR* buf);
+	void CommandProcess(PSOCKET_OBJ p_sock, WORD com, TCHAR* buf);
+	PLAY_GAME_DATA * SearchGameOBJ(WORD roomNum);
 	BOOL SendPacket(PSOCKET_OBJ Client, WORD com, TCHAR* buf);
+	
 	void InitateHeartBeat();
+	void MakeGameRoom(PSOCKET_OBJ p_sock, TCHAR* title);
 	void CheckHeartBeat(PSOCKET_OBJ p_sock);
-	void SendPassPacket(PSOCKET_OBJ Client, TCHAR* buf);
-	void PassCommand(PSOCKET_OBJ p_sock, TCHAR* buf);
 	void Disconnect(PSOCKET_OBJ pSocktObj);
 	void IniSocketObj();
-	PLAY_GAME_DATA* SearchGameOBJ(PSOCKET_OBJ p_sock);
-
-	void RematchGame(PSOCKET_OBJ p_sock,TCHAR* buf);
-	//WORD CheckUserNum(char* ipAddr, int iPort);
-	PSOCKET_OBJ InUserVector(SOCKADDR_IN Client);
-	UNPACK_DATA UDPReceive(WORD UserNum, TCHAR* buffer, WORD wSize);
+	
+	
+	PSOCKET_OBJ SearchingInUserList(char* ipaddr,short port);
+	PSOCKET_OBJ InUserVector(char* ipAddr, short port,TCHAR* Uname);
 
 public:
 	WSADATA wsaData;
@@ -80,19 +78,12 @@ private:
 
 private:
 	vector<PLAY_GAME_DATA*> vReMatch;
-	queue<PLAY_GAME_DATA*> qWaiting;
 	list<PLAY_GAME_DATA*> lGameList;
-	queue<MESSAGE> qMessage;
 	vector<PSOCKET_OBJ> lPlayerList;
-	
 	HANDLE hHeartBeat;
 	HANDLE hHeartTimer;
 	HANDLE hRecvThread;
-	
 	LARGE_INTEGER liDueTime;
-	
-
-	
 	PacketSet pPacket;
 	
 };

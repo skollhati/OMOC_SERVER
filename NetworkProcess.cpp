@@ -46,7 +46,6 @@ void NetworkProcess::InitateHeartBeat()
 
 UINT WINAPI NetworkProcess::CheckingHeartBeatThread(LPVOID lpParam)
 {
-	cout << "HeartBeatThread Start" << endl;
 	NetworkProcess * pNet = (NetworkProcess*)lpParam;
 	vector<PSOCKET_OBJ>::iterator itor;
 	while (1)
@@ -94,14 +93,19 @@ void NetworkProcess::StartServer()
 	liDueTime.QuadPart = -100000000;
 	hHeartTimer = CreateWaitableTimer(NULL, FALSE, NULL);
 	SetWaitableTimer(hHeartTimer, &liDueTime, 10000, NULL, NULL, FALSE);
+
 	cout << "Server Start!" << endl;
+
 	hHeartBeat = (HANDLE)_beginthreadex(NULL, 0, NetworkProcess::CheckingHeartBeatThread, (LPVOID)this, 0, NULL);
 	hRecvThread = (HANDLE)_beginthreadex(NULL, 0, NetworkProcess::RecvProc, (LPVOID)this, 0, NULL);
+	cout << "HeartBeatThread Start" << endl;
+	cout << "Recv Thread Start" << endl;
+
 }
 
 void NetworkProcess::IniSocketObj()
 {
-	for (int i = 0; i < 10; i++)
+	for (int i = 0; i < 50; i++)
 	{
 		PSOCKET_OBJ pSocketObj = new SOCKET_DATA();
 		memset(pSocketObj, 0, sizeof(SOCKET_DATA));
@@ -110,14 +114,15 @@ void NetworkProcess::IniSocketObj()
 		if ((i + 1) % 2 == 0)
 		{
 			PLAY_GAME_DATA *pGame = new PLAY_GAME_DATA();
+			pGame->game_number = i / 2;
 			lGameList.push_back(pGame);
 		}
 	}
 }
 
-//WORD NetworkProcess::CheckUserNum(char* ipAddr, int iPort)
+//WORD NetworkProcess::CheckUserNum(PSOCKET_OBJ p_sock)
 //{
-//	PSOCKET_OBJ pSocket = InUserVector(ipAddr);
+//	PSOCKET_OBJ pSocket = InUserVector(p_sock->ipAddr,p_sock->iPort);
 //
 //	if (pSocket->bOnOff == 0)
 //	{
@@ -137,19 +142,15 @@ void NetworkProcess::IniSocketObj()
 //}
 
 //유저소켓 정보를 가진 벡터에서 같은 객체가 있는지 찾는 함수
-PSOCKET_OBJ NetworkProcess::InUserVector(SOCKADDR_IN Client)
+PSOCKET_OBJ NetworkProcess::InUserVector(char* ipAddr, short port,TCHAR* Uname)
 {
-	
-	char* ipAddr = inet_ntoa(Client.sin_addr);
-
-	if (lPlayerList.size() == 0)
-		return NULL;
 
 	vector<PSOCKET_OBJ>::iterator itor = lPlayerList.begin();
-	PSOCKET_OBJ pEmptyObj = NULL;
+	PSOCKET_OBJ pEmptyObj = new SOCKET_DATA();
+
 	for (itor; itor != lPlayerList.end(); itor++)
 	{
-		if (strcmp((*itor)->ipAddr, ipAddr)!=0)
+		if (strcmp((*itor)->ipAddr, ipAddr) == 0)
 		{
 			return (*itor);
 		}
@@ -159,27 +160,43 @@ PSOCKET_OBJ NetworkProcess::InUserVector(SOCKADDR_IN Client)
 		}
 
 	}
-	
+
 	pEmptyObj->bOnOff = 1;
 	strcpy(pEmptyObj->ipAddr, ipAddr);
-	pEmptyObj->iPort = Client.sin_port;
-	
+	pEmptyObj->iPort = port;
+	_tcscpy(pEmptyObj->UserName, Uname);
+	//같은 객체가 없으면 입력후 반환 - USER_IN 일때만 해야하므로 고쳐야함
 
 	return pEmptyObj;
 }
 
+PSOCKET_OBJ NetworkProcess::SearchingInUserList(char* ipaddr, short port)
+{
+	vector<PSOCKET_OBJ>::iterator itor = lPlayerList.begin();
+	for (itor; itor != lPlayerList.end(); itor++)
+	{
+
+		if (strcmp((*itor)->ipAddr, ipaddr) == 0 && (*itor)->iPort == port)
+		{
+			return (*itor);
+		}
+		if (itor == lPlayerList.end())
+			return NULL;
+	}
+
+}
 
 
 UINT WINAPI NetworkProcess::RecvProc(LPVOID lpParam)
 {
-	cout << "Recv Thread Start" << endl;
+
 	NetworkProcess* pNproc = (NetworkProcess *)lpParam;
-	
+
 	while (1)
 	{
 		pNproc->FromClient_Size = sizeof(pNproc->FromClient);
 
-		pNproc->Recv_Size = recvfrom(pNproc->ServerSocket, (char*)pNproc->Buffer, BUFFER_SIZE, 0, (struct sockaddr*)&(pNproc->FromClient), &(pNproc->FromClient_Size));
+		pNproc->Recv_Size = recvfrom(pNproc->ServerSocket, (char*)&(pNproc->Buffer), BUFFER_SIZE, 0, (struct sockaddr*)&(pNproc->FromClient), &(pNproc->FromClient_Size));
 
 		if (pNproc->Recv_Size < 0)
 		{
@@ -190,52 +207,38 @@ UINT WINAPI NetworkProcess::RecvProc(LPVOID lpParam)
 			cout << "packet data" << Buffer << endl;*/
 
 			//strcpy(t_SocketOBJ->ipAddr, inet_ntoa(pNproc->FromClient.sin_addr));
-		PSOCKET_OBJ temp_sock = pNproc->InUserVector(pNproc->FromClient);
+		//PSOCKET_OBJ temp_sock = pNproc->InUserVector(pNproc->FromClient);
 
+		if (pNproc->Recv_Size > 0)
+			cout << "받은 데이터 :" << pNproc->Buffer << endl;
 
-		pNproc->CommandProcess(temp_sock, pNproc->Buffer);
+		pNproc->pPacket.GetInit(pNproc->Buffer);
 
+		char * addr = inet_ntoa(pNproc->FromClient.sin_addr);
+
+		WORD temp_com = pNproc->pPacket.GetWORD();
+		if (temp_com == USER_IN)
+		{
+			pNproc->CheckHeartBeat(pNproc->InUserVector(addr, pNproc->FromClient.sin_port, pNproc->pPacket.GetStr()));
+
+		}
+		else
+		{
+			PSOCKET_OBJ p_tempSock = pNproc->SearchingInUserList(addr, pNproc->FromClient.sin_port);
+			
+			if (p_tempSock != NULL)
+				pNproc->CommandProcess(p_tempSock, temp_com, pNproc->pPacket.GetStr());
+		}
 
 	}
 	return 0;
 }
 
-void NetworkProcess::ConnectPlayer(PSOCKET_OBJ p_sock, TCHAR* buf)
-{
-	if (qWaiting.size() != 0)
-	{
-		qWaiting.front()->player2 = p_sock;
-		_tcscpy(qWaiting.front()->player2_name, buf);
-
-		SendPacket(p_sock, MATCHING_GAME, qWaiting.front()->player1_name);//매칭 성공시 대전 상대의 플레이 명 전송
-		SendPacket(qWaiting.front()->player1, MATCHING_GAME, buf);
-
-
-		qWaiting.pop();
-
-	}
-	else
-	{
-		list<PLAY_GAME_DATA*>::iterator itor;
-		for (itor = lGameList.begin(); itor != lGameList.end(); itor++)
-		{
-			if (!(*itor)->use_obj)
-			{
-				_tcscpy((*itor)->player1_name, buf);
-				(*itor)->player1 = p_sock;
-				(*itor)->use_obj = true;
-				qWaiting.push(*itor);
-				break;
-			}
-			SendPacket(p_sock, MATCHING_GAME, _T("0")); // 매칭 실패를 의미하는 0을 보냄
-
-		}
-	}
-}
 
 void NetworkProcess::Disconnect(PSOCKET_OBJ p_SockObj)
 {
 	//게임 객체 찾아서 지우기 작업 해야함
+	//이것도 새로 할것
 	if (p_SockObj->bOnOff != 0)
 	{
 		memset(p_SockObj->ipAddr, 0, sizeof(p_SockObj->ipAddr));
@@ -250,7 +253,7 @@ void NetworkProcess::Disconnect(PSOCKET_OBJ p_SockObj)
 			SendPacket(pGameData->player2, GAME_RETIRE, NULL); //상대방이 기권했다고 알림
 			memset(pGameData, 0, sizeof(PLAY_GAME_DATA));
 		}
-		else if(strcmp(pGameData->player2->ipAddr, p_SockObj->ipAddr) == 0)
+		else if (strcmp(pGameData->player2->ipAddr, p_SockObj->ipAddr) == 0)
 		{
 			SendPacket(pGameData->player1, GAME_RETIRE, NULL); //상대방이 기권했다고 알림
 			memset(pGameData, 0, sizeof(PLAY_GAME_DATA));
@@ -258,62 +261,55 @@ void NetworkProcess::Disconnect(PSOCKET_OBJ p_SockObj)
 	}
 }
 
-void NetworkProcess::PassCommand(PSOCKET_OBJ p_sock, TCHAR* buf)
+void NetworkProcess::CommandProcess(PSOCKET_OBJ p_sock, WORD com, TCHAR* buf)
 {
-	SOCKADDR_IN temp_sock;
-
-	list<PLAY_GAME_DATA*>::iterator itor;
-	for (itor = lGameList.begin(); itor != lGameList.end(); itor++)
+	switch (com)
 	{
-		if (strcmp((*itor)->player1->ipAddr, p_sock->ipAddr) == 0)
-		{
-
-			SendPassPacket((*itor)->player2, buf);
-			break;
-		}
-		else if (strcmp((*itor)->player2->ipAddr, p_sock->ipAddr) == 0)
-		{
-
-			SendPassPacket((*itor)->player1, buf);
-			break;
-		}
-	}
-}
-
-void NetworkProcess::CommandProcess(PSOCKET_OBJ p_sock, TCHAR* buf)
-{
-	_tprintf(_T("%s"),buf);
-	pPacket.GetInit(buf);
-
-	switch (pPacket.GetWORD())
-	{
-
-	case USER_IN: //리스트에 포함되지 않은 소켓 포함시키기
-		CheckHeartBeat(p_sock); ConnectPlayer(p_sock, pPacket.GetStr());//상대방의 정보를 서로에게 전달
-		break;
 
 	case USER_OUT: Disconnect(p_sock);//접속 종료 프로세스
 		break;
 
-	case GAME_REMATCH: RematchGame(p_sock, pPacket.GetStr());//rematch 벡터에 넣고 양측 정보 대기(클라이언트 측에서 10초 이내에 입력이 없을시 CANCEL 신호를 알림
+	case GAME_ROOM_LIST: 
 		break;
-	case GAME_RESULT: //게임 결과를 양측에서 받아서 옳은 결과가 도출되었는지 판단.
+	case JOIN_GAME:
 		break;
-	case GAME_COMMAND: PassCommand(p_sock, buf);// 전달 프로세스
+	case GAME_ROOM_MAKE: 
 		break;
 	case HEARTBEAT: CheckHeartBeat(p_sock);
 		break;
 	}
+
 }
 
-PLAY_GAME_DATA* NetworkProcess::SearchGameOBJ(PSOCKET_OBJ p_sock)
+void NetworkProcess::MakeGameRoom(PSOCKET_OBJ p_sock, TCHAR* title)
 {
+	//PSOCKET_OBJ가 유저이름도 갖고 있어야한다.
+	list<PLAY_GAME_DATA*>::iterator itor;
+	for (itor = lGameList.begin(); itor != lGameList.end(); itor++)
+	{
+		if (!(*itor)->use_obj)
+		{
+			_tcscpy((*itor)->player1_name, p_sock->UserName);
+			_tcscpy((*itor)->title, title);
 
+			(*itor)->player1 = p_sock;
+			(*itor)->use_obj = true;
+			break;
+		}
+		
+	}
+	//게임 리스트 여유분 없을때 상황도 고려해야한다.
+
+}
+
+PLAY_GAME_DATA* NetworkProcess::SearchGameOBJ(WORD roomNum)
+{
+	//룸넘버로 찾자
 	list<PLAY_GAME_DATA*>::iterator itor;
 
 	for (itor = lGameList.begin(); itor != lGameList.end(); itor++)
 	{
-		if (strcmp((*itor)->player1->ipAddr, p_sock->ipAddr) == 0 || strcmp((*itor)->player2->ipAddr, p_sock->ipAddr) == 0)
+		if ((*itor)->game_number == roomNum)
 		{
 			return *itor;
 			break;
@@ -321,57 +317,6 @@ PLAY_GAME_DATA* NetworkProcess::SearchGameOBJ(PSOCKET_OBJ p_sock)
 	}
 
 	return NULL;
-}
-
-void NetworkProcess::RematchGame(PSOCKET_OBJ p_sock, TCHAR* buf)
-{
-	PLAY_GAME_DATA* temp_obj = SearchGameOBJ(p_sock);
-	if (_tcscmp(buf, _T("1")) == 0)
-	{
-		if (temp_obj != NULL)
-		{
-			if (strcmp(temp_obj->player1->ipAddr, p_sock->ipAddr) == 0)
-			{
-				temp_obj->rematch_1 = true;
-			}
-			else if (strcmp(temp_obj->player2->ipAddr, p_sock->ipAddr) == 0)
-			{
-				temp_obj->rematch_2 = true;
-			}
-		}
-
-		if (temp_obj->rematch_1 && temp_obj->rematch_2)
-		{
-			SendPacket(temp_obj->player1, GAME_REMATCH, _T("1"));
-			SendPacket(temp_obj->player2, GAME_REMATCH, _T("1"));
-
-			temp_obj->rematch_1 = false;
-			temp_obj->rematch_2 = false;
-
-		}
-		else
-		{
-			SendPacket(p_sock, GAME_REMATCH, _T("2")); //2는 대기하라는 뜻
-		}
-	}
-	else
-	{
-		///재대결 거부 ->  매칭 실패 알림
-		if (strcmp(temp_obj->player1->ipAddr, p_sock->ipAddr) == 0)
-		{
-			SendPacket(temp_obj->player1, GAME_REMATCH, _T("0"));
-			memset(temp_obj, 0, sizeof(PLAY_GAME_DATA));
-
-			ConnectPlayer(temp_obj->player1, temp_obj->player1_name);
-		}
-		else
-		{
-			SendPacket(temp_obj->player2, GAME_REMATCH, _T("0"));
-			memset(temp_obj, 0, sizeof(PLAY_GAME_DATA));
-
-			ConnectPlayer(temp_obj->player2, temp_obj->player2_name);
-		}
-	}
 }
 
 void NetworkProcess::CheckHeartBeat(PSOCKET_OBJ p_sock)
@@ -387,16 +332,6 @@ void NetworkProcess::CheckHeartBeat(PSOCKET_OBJ p_sock)
 		p_sock->bHeartBeat[1] = true;
 	}
 }
-
-void NetworkProcess::SendPassPacket(PSOCKET_OBJ Client, TCHAR* buf)
-{
-	SOCKADDR_IN ToClient;
-	ToClient.sin_family = AF_INET;
-	ToClient.sin_addr.s_addr = inet_addr(Client->ipAddr);
-	ToClient.sin_port = Client->iPort;
-	Send_Size = sendto(ServerSocket, (const char*)buf, BUFFER_SIZE, 0, (struct sockaddr*)&ToClient, sizeof(ToClient));
-}
-
 
 BOOL NetworkProcess::SendPacket(PSOCKET_OBJ Client, WORD com, TCHAR* buf)
 {
@@ -420,38 +355,3 @@ BOOL NetworkProcess::SendPacket(PSOCKET_OBJ Client, WORD com, TCHAR* buf)
 
 	return false;
 }
-
-//UNPACK_DATA NetworkProcess::UDPReceive(WORD UserNum, TCHAR* buffer, WORD wSize)
-//{
-//	pPacket.GetInit(buffer);
-//	UNPACK_DATA m_Unpack;
-//
-//	//사이즈에 맞게 온 함수일 경우 차례대로 진행 아닐 경우 무시
-//	if (pPacket.GetSize() == wSize)
-//	{
-//		switch (pPacket.GetWORD())
-//		{
-//		//case MATCHING_GAME:
-//		//	//선공 후공(0,1) + 상대 아이디
-//		//	MATCHING match_game = *(MATCHING *)pPacket.GetStr();
-//		//	pGameProc->setGame(match_game);
-//		//	SetEvent(pGameProc->hEvent);
-//		//	break;
-//
-//		//case GAME_COMMAND:
-//		//	XY temp_xy = strToXY(pPacket.GetStr());
-//		//	pGameProc->RivalStoneInput(temp_xy.y, temp_xy.x);
-//		//	break;
-//
-//		//case GAME_INFO:
-//		//	//승패
-//		//	//게임 결과 유저정보 갱신 (상대편 정보도 표시)
-//		//	break;
-//		}
-//
-//	}
-//	else
-//		m_Unpack = { 0, };
-//
-//	return m_Unpack;
-//}
