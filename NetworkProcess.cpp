@@ -142,7 +142,7 @@ void NetworkProcess::IniSocketObj()
 //}
 
 //유저소켓 정보를 가진 벡터에서 같은 객체가 있는지 찾는 함수
-PSOCKET_OBJ NetworkProcess::InUserVector(char* ipAddr, short port,TCHAR* Uname)
+PSOCKET_OBJ NetworkProcess::InUserVector(char* ipAddr, short port, TCHAR* Uname)
 {
 
 	vector<PSOCKET_OBJ>::iterator itor = lPlayerList.begin();
@@ -225,7 +225,7 @@ UINT WINAPI NetworkProcess::RecvProc(LPVOID lpParam)
 		else
 		{
 			PSOCKET_OBJ p_tempSock = pNproc->SearchingInUserList(addr, pNproc->FromClient.sin_port);
-			
+
 			if (p_tempSock != NULL)
 				pNproc->CommandProcess(p_tempSock, temp_com, pNproc->pPacket.GetStr());
 		}
@@ -235,7 +235,7 @@ UINT WINAPI NetworkProcess::RecvProc(LPVOID lpParam)
 }
 
 
-void NetworkProcess::Disconnect(PSOCKET_OBJ p_SockObj)
+void NetworkProcess::Disconnect(PSOCKET_OBJ p_SockObj, TCHAR* buf)
 {
 	//게임 객체 찾아서 지우기 작업 해야함
 	//이것도 새로 할것
@@ -244,19 +244,23 @@ void NetworkProcess::Disconnect(PSOCKET_OBJ p_SockObj)
 		memset(p_SockObj->ipAddr, 0, sizeof(p_SockObj->ipAddr));
 		p_SockObj->bOnOff = 0;
 	}
+	WORD gRoomNum = *(WORD*)buf;
 
-	PLAY_GAME_DATA* pGameData = SearchGameOBJ(p_SockObj);
-	if (pGameData != NULL)
+	if (gRoomNum != 0)
 	{
-		if (strcmp(pGameData->player1->ipAddr, p_SockObj->ipAddr) == 0)
+		PLAY_GAME_DATA* pGameData = SearchGameOBJ(gRoomNum);
+		if (pGameData != NULL)
 		{
-			SendPacket(pGameData->player2, GAME_RETIRE, NULL); //상대방이 기권했다고 알림
-			memset(pGameData, 0, sizeof(PLAY_GAME_DATA));
-		}
-		else if (strcmp(pGameData->player2->ipAddr, p_SockObj->ipAddr) == 0)
-		{
-			SendPacket(pGameData->player1, GAME_RETIRE, NULL); //상대방이 기권했다고 알림
-			memset(pGameData, 0, sizeof(PLAY_GAME_DATA));
+			if (strcmp(pGameData->player1->ipAddr, p_SockObj->ipAddr) == 0)
+			{
+				SendPacket(pGameData->player2, GAME_RETIRE, NULL); //상대방이 기권했다고 알림
+				memset(pGameData, 0, sizeof(PLAY_GAME_DATA));
+			}
+			else if (strcmp(pGameData->player2->ipAddr, p_SockObj->ipAddr) == 0)
+			{
+				SendPacket(pGameData->player1, GAME_RETIRE, NULL); //상대방이 기권했다고 알림
+				memset(pGameData, 0, sizeof(PLAY_GAME_DATA));
+			}
 		}
 	}
 }
@@ -266,18 +270,29 @@ void NetworkProcess::CommandProcess(PSOCKET_OBJ p_sock, WORD com, TCHAR* buf)
 	switch (com)
 	{
 
-	case USER_OUT: Disconnect(p_sock);//접속 종료 프로세스
+	case USER_OUT: Disconnect(p_sock,buf);//접속 종료 프로세스
 		break;
 
-	case GAME_ROOM_LIST: 
+	case GAME_ROOM_LIST:SendGameRoomList(p_sock);
 		break;
 	case JOIN_GAME:
 		break;
-	case GAME_ROOM_MAKE: 
+	case GAME_ROOM_MAKE:
 		break;
 	case HEARTBEAT: CheckHeartBeat(p_sock);
 		break;
 	}
+
+}
+
+void NetworkProcess::SendGameRoomList(PSOCKET_OBJ p_sock)
+{
+	TCHAR buf[100];
+	*(WORD *)(&buf[0]) = HEAD;
+	*(WORD *)(&buf[(sizeof(WORD))]) = (WORD)0;
+	SendPacket(p_sock, GAME_ROOM_LIST, buf);
+	//반복문을 이용해서 방을 갯수만큼 끊어서 보낼것
+
 
 }
 
@@ -296,7 +311,7 @@ void NetworkProcess::MakeGameRoom(PSOCKET_OBJ p_sock, TCHAR* title)
 			(*itor)->use_obj = true;
 			break;
 		}
-		
+
 	}
 	//게임 리스트 여유분 없을때 상황도 고려해야한다.
 
@@ -304,7 +319,6 @@ void NetworkProcess::MakeGameRoom(PSOCKET_OBJ p_sock, TCHAR* title)
 
 PLAY_GAME_DATA* NetworkProcess::SearchGameOBJ(WORD roomNum)
 {
-	//룸넘버로 찾자
 	list<PLAY_GAME_DATA*>::iterator itor;
 
 	for (itor = lGameList.begin(); itor != lGameList.end(); itor++)

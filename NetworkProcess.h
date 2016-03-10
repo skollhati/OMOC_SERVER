@@ -48,8 +48,9 @@ public:
 	
 	void InitateHeartBeat();
 	void MakeGameRoom(PSOCKET_OBJ p_sock, TCHAR* title);
+	void SendGameRoomList(PSOCKET_OBJ p_sock);
 	void CheckHeartBeat(PSOCKET_OBJ p_sock);
-	void Disconnect(PSOCKET_OBJ pSocktObj);
+	void Disconnect(PSOCKET_OBJ pSocktObj, TCHAR* buf);
 	void IniSocketObj();
 	
 	

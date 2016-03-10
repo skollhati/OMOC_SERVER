@@ -34,7 +34,8 @@
 
 #define GAME_RETIRE 12
 #define JOIN_GAME 13
-
+#define HEAD 30;
+#define BODY 31;
 #define GAME_ROOM_LIST 20
 #define GAME_ROOM_MAKE 21
 
