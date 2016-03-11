@@ -52,7 +52,7 @@ public:
 	void CheckHeartBeat(PSOCKET_OBJ p_sock);
 	void Disconnect(PSOCKET_OBJ pSocktObj, TCHAR* buf);
 	void IniSocketObj();
-	
+	void JoinGameRoom(PSOCKET_OBJ p_sock, TCHAR* buf);
 	
 	PSOCKET_OBJ SearchingInUserList(char* ipaddr,short port);
 	PSOCKET_OBJ InUserVector(char* ipAddr, short port,TCHAR* Uname);
@@ -79,7 +79,7 @@ private:
 
 private:
 	vector<PLAY_GAME_DATA*> vReMatch;
-	list<PLAY_GAME_DATA*> lGameList;
+	vector<PLAY_GAME_DATA*> lGameList;
 	vector<PSOCKET_OBJ> lPlayerList;
 	HANDLE hHeartBeat;
 	HANDLE hHeartTimer;

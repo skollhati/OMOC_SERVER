@@ -63,19 +63,24 @@ typedef struct SOCKET_DATA
 	bool bOnOff;
 }*PSOCKET_OBJ;
 
+typedef struct SENDING_GAME_ROOM
+{
+	WORD game_number;
+	TCHAR title[30];
+};
+
 typedef struct PLAY_GAME_DATA
 {
 	BOOL use_obj = false;
 	WORD game_number;
-	BOOL rematch_1 = false;
-	BOOL rematch_2 = false;
+	
 	PSOCKET_OBJ player1;
 	PSOCKET_OBJ player2;
-
-	TCHAR title[40];
+	
+	TCHAR title[30];
+	WORD game_master;
 	TCHAR player1_name[20];
 	TCHAR player2_name[20];
-
 };
 
 typedef struct UNPACK_DATA
@@ -84,6 +89,11 @@ typedef struct UNPACK_DATA
 	TCHAR *buf;
 };
 
+typedef struct GameRoomMaster
+{
+	char ip_addr[20];
+	short port;
+};
 
 
 #endif

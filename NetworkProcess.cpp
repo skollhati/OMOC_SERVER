@@ -61,7 +61,7 @@ UINT WINAPI NetworkProcess::CheckingHeartBeatThread(LPVOID lpParam)
 				{
 					if (!(*itor)->bHeartBeat[0])
 					{
-						pNet->Disconnect(*itor);
+						pNet->Disconnect(*itor,NULL);
 					}
 
 					iHeartCount = 1;
@@ -70,7 +70,7 @@ UINT WINAPI NetworkProcess::CheckingHeartBeatThread(LPVOID lpParam)
 				{
 					if (!(*itor)->bHeartBeat[1])
 					{
-						pNet->Disconnect(*itor);
+						pNet->Disconnect(*itor,NULL);
 					}
 					iHeartCount = 0;
 				}
@@ -120,26 +120,6 @@ void NetworkProcess::IniSocketObj()
 	}
 }
 
-//WORD NetworkProcess::CheckUserNum(PSOCKET_OBJ p_sock)
-//{
-//	PSOCKET_OBJ pSocket = InUserVector(p_sock->ipAddr,p_sock->iPort);
-//
-//	if (pSocket->bOnOff == 0)
-//	{
-//		strcpy(pSocket->ipAddr, ipAddr);
-//		pSocket->bOnOff = TRUE;
-//		pSocket->iPort = iPort;
-//
-//		return pSocket->wUserNum;
-//	}
-//	else if (pSocket == NULL)
-//	{
-//		return -1; //빈 객체가 없을때- 접속허용 용량을 벗어날때
-//	}
-//
-//
-//	return pSocket->wUserNum;
-//}
 
 //유저소켓 정보를 가진 벡터에서 같은 객체가 있는지 찾는 함수
 PSOCKET_OBJ NetworkProcess::InUserVector(char* ipAddr, short port, TCHAR* Uname)
@@ -275,14 +255,34 @@ void NetworkProcess::CommandProcess(PSOCKET_OBJ p_sock, WORD com, TCHAR* buf)
 
 	case GAME_ROOM_LIST:SendGameRoomList(p_sock);
 		break;
-	case JOIN_GAME:
+	case JOIN_GAME: JoinGameRoom(p_sock, buf);
 		break;
-	case GAME_ROOM_MAKE:
+	case GAME_ROOM_MAKE:MakeGameRoom(p_sock, buf);
 		break;
 	case HEARTBEAT: CheckHeartBeat(p_sock);
 		break;
 	}
 
+}
+
+void NetworkProcess::JoinGameRoom(PSOCKET_OBJ p_sock,TCHAR* buf)
+{
+	WORD gRoomNum = *(WORD*)buf;
+	PLAY_GAME_DATA* FindedGame = SearchGameOBJ(gRoomNum);
+	GameRoomMaster gRoomMaster;
+	if (FindedGame->game_master == 1)
+	{
+		strcpy(gRoomMaster.ip_addr, FindedGame->player1->ipAddr);
+		gRoomMaster.port = FindedGame->player1->iPort;
+
+	}
+	else
+	{
+		strcpy(gRoomMaster.ip_addr, FindedGame->player2->ipAddr);
+		gRoomMaster.port = FindedGame->player2->iPort;
+	}
+
+	SendPacket(p_sock, JOIN_GAME, (TCHAR *)(&gRoomMaster));
 }
 
 void NetworkProcess::SendGameRoomList(PSOCKET_OBJ p_sock)
@@ -291,7 +291,33 @@ void NetworkProcess::SendGameRoomList(PSOCKET_OBJ p_sock)
 	*(WORD *)(&buf[0]) = HEAD;
 	*(WORD *)(&buf[(sizeof(WORD))]) = (WORD)0;
 	SendPacket(p_sock, GAME_ROOM_LIST, buf);
-	//반복문을 이용해서 방을 갯수만큼 끊어서 보낼것
+	//반복문을 이용해서 방을 갯수만큼 끊어서 보낼것 방 최대 갯수는 50개
+	// 500> 방 하나 당 제목 60바이트 + 방넘버 2바이트 소모 5개 방을 보낼것
+	
+	for (int i = 0; i < lGameList.size();i += 5)
+	{
+		TCHAR szBuf[200];
+		int offset = 0;
+		*(WORD *)(&szBuf[offset]) = BODY;
+		offset += sizeof(WORD);
+		SENDING_GAME_ROOM sendRoom[5];
+
+		for (int j = 0; j < 5;j++)
+		{
+			if(lGameList.at(i+j)->use_obj =true)
+			{
+			sendRoom[j].game_number = lGameList.at(i+j)->game_number;
+			_tcscpy(sendRoom[j].title,lGameList.at(i + j)->title);
+			}
+		}
+
+		memcpy(&szBuf[offset], sendRoom, sizeof(sendRoom));
+		offset += sizeof(sendRoom);
+		*(WORD *)(&szBuf[offset]) = (WORD)0;
+		SendPacket(p_sock, GAME_ROOM_LIST, szBuf);
+	}
+
+
 
 
 }
@@ -299,16 +325,15 @@ void NetworkProcess::SendGameRoomList(PSOCKET_OBJ p_sock)
 void NetworkProcess::MakeGameRoom(PSOCKET_OBJ p_sock, TCHAR* title)
 {
 	//PSOCKET_OBJ가 유저이름도 갖고 있어야한다.
-	list<PLAY_GAME_DATA*>::iterator itor;
-	for (itor = lGameList.begin(); itor != lGameList.end(); itor++)
+	for (int i = 0; i < lGameList.size(); i++)
 	{
-		if (!(*itor)->use_obj)
+		if (!lGameList.at(i)->use_obj)
 		{
-			_tcscpy((*itor)->player1_name, p_sock->UserName);
-			_tcscpy((*itor)->title, title);
+			_tcscpy(lGameList.at(i)->player1_name, p_sock->UserName);
+			_tcscpy(lGameList.at(i)->title, title);
 
-			(*itor)->player1 = p_sock;
-			(*itor)->use_obj = true;
+			lGameList.at(i)->player1 = p_sock;
+			lGameList.at(i)->use_obj = true;
 			break;
 		}
 
@@ -319,13 +344,11 @@ void NetworkProcess::MakeGameRoom(PSOCKET_OBJ p_sock, TCHAR* title)
 
 PLAY_GAME_DATA* NetworkProcess::SearchGameOBJ(WORD roomNum)
 {
-	list<PLAY_GAME_DATA*>::iterator itor;
-
-	for (itor = lGameList.begin(); itor != lGameList.end(); itor++)
+	for (int i = 0; i < lGameList.size(); i++)
 	{
-		if ((*itor)->game_number == roomNum)
+		if (lGameList.at(i)->game_number == roomNum)
 		{
-			return *itor;
+			return lGameList.at(i);
 			break;
 		}
 	}
