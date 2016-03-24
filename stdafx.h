@@ -34,8 +34,8 @@
 
 #define GAME_RETIRE 12
 #define JOIN_GAME 13
-#define HEAD 30;
-#define BODY 31;
+#define HEAD 30
+#define BODY 31
 #define GAME_ROOM_LIST 20
 #define GAME_ROOM_MAKE 21
 
@@ -55,7 +55,7 @@ typedef struct XY {
 typedef struct SOCKET_DATA
 {
 	BOOL bHeartBeat[2] = { true, true };
-	TCHAR UserName[10];
+	char UserName[10];
 	WORD wUserNum;
 	char ipAddr[30];
 	int iPort;
@@ -66,7 +66,7 @@ typedef struct SOCKET_DATA
 typedef struct SENDING_GAME_ROOM
 {
 	WORD game_number;
-	TCHAR title[30];
+	char title[30];
 };
 
 typedef struct PLAY_GAME_DATA
@@ -77,16 +77,16 @@ typedef struct PLAY_GAME_DATA
 	PSOCKET_OBJ player1;
 	PSOCKET_OBJ player2;
 	
-	TCHAR title[30];
+	char title[30];
 	WORD game_master;
-	TCHAR player1_name[20];
-	TCHAR player2_name[20];
+	char player1_name[20];
+	char player2_name[20];
 };
 
 typedef struct UNPACK_DATA
 {
 	WORD com;
-	TCHAR *buf;
+	char *buf;
 };
 
 typedef struct GameRoomMaster

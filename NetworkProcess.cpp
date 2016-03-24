@@ -1,4 +1,3 @@
-
 #include "NetworkProcess.h"
 #pragma comment(lib,"ws2_32.lib")
 
@@ -61,7 +60,7 @@ UINT WINAPI NetworkProcess::CheckingHeartBeatThread(LPVOID lpParam)
 				{
 					if (!(*itor)->bHeartBeat[0])
 					{
-						pNet->Disconnect(*itor,NULL);
+						pNet->Disconnect(*itor, NULL);
 					}
 
 					iHeartCount = 1;
@@ -70,7 +69,7 @@ UINT WINAPI NetworkProcess::CheckingHeartBeatThread(LPVOID lpParam)
 				{
 					if (!(*itor)->bHeartBeat[1])
 					{
-						pNet->Disconnect(*itor,NULL);
+						pNet->Disconnect(*itor, NULL);
 					}
 					iHeartCount = 0;
 				}
@@ -93,11 +92,12 @@ void NetworkProcess::StartServer()
 	liDueTime.QuadPart = -100000000;
 	hHeartTimer = CreateWaitableTimer(NULL, FALSE, NULL);
 	SetWaitableTimer(hHeartTimer, &liDueTime, 10000, NULL, NULL, FALSE);
+	IniSocketObj();
+
+	//hHeartBeat = (HANDLE)_beginthreadex(NULL, 0, NetworkProcess::CheckingHeartBeatThread, (LPVOID)this, 0, NULL);
+	hRecvThread = (HANDLE)_beginthreadex(NULL, 0, NetworkProcess::RecvProc, (LPVOID)this, 0, NULL);
 
 	cout << "Server Start!" << endl;
-
-	hHeartBeat = (HANDLE)_beginthreadex(NULL, 0, NetworkProcess::CheckingHeartBeatThread, (LPVOID)this, 0, NULL);
-	hRecvThread = (HANDLE)_beginthreadex(NULL, 0, NetworkProcess::RecvProc, (LPVOID)this, 0, NULL);
 	cout << "HeartBeatThread Start" << endl;
 	cout << "Recv Thread Start" << endl;
 
@@ -105,6 +105,7 @@ void NetworkProcess::StartServer()
 
 void NetworkProcess::IniSocketObj()
 {
+
 	for (int i = 0; i < 50; i++)
 	{
 		PSOCKET_OBJ pSocketObj = new SOCKET_DATA();
@@ -115,14 +116,22 @@ void NetworkProcess::IniSocketObj()
 		{
 			PLAY_GAME_DATA *pGame = new PLAY_GAME_DATA();
 			pGame->game_number = i / 2;
+			pGame->use_obj = false;
 			lGameList.push_back(pGame);
 		}
+	}
+
+	for (int i = 0; i < 12; i++)
+	{
+		lGameList.at(i)->use_obj = true;
+		strcpy(lGameList.at(i)->title, "test");
+		RealRoom++;
 	}
 }
 
 
 //유저소켓 정보를 가진 벡터에서 같은 객체가 있는지 찾는 함수
-PSOCKET_OBJ NetworkProcess::InUserVector(char* ipAddr, short port, TCHAR* Uname)
+PSOCKET_OBJ NetworkProcess::InUserVector(char* ipAddr, short port, char* Uname)
 {
 
 	vector<PSOCKET_OBJ>::iterator itor = lPlayerList.begin();
@@ -144,7 +153,7 @@ PSOCKET_OBJ NetworkProcess::InUserVector(char* ipAddr, short port, TCHAR* Uname)
 	pEmptyObj->bOnOff = 1;
 	strcpy(pEmptyObj->ipAddr, ipAddr);
 	pEmptyObj->iPort = port;
-	_tcscpy(pEmptyObj->UserName, Uname);
+	strcpy(pEmptyObj->UserName, Uname);
 	//같은 객체가 없으면 입력후 반환 - USER_IN 일때만 해야하므로 고쳐야함
 
 	return pEmptyObj;
@@ -180,17 +189,13 @@ UINT WINAPI NetworkProcess::RecvProc(LPVOID lpParam)
 
 		if (pNproc->Recv_Size < 0)
 		{
-			cout << "recvfrom() error" << endl;
+			printf("rcvfrom() error\n");
 		}
 
-		/*	cout << "packet arrival send client is" << inet_ntoa(FromClient.sin_addr) << endl;
-			cout << "packet data" << Buffer << endl;*/
 
-			//strcpy(t_SocketOBJ->ipAddr, inet_ntoa(pNproc->FromClient.sin_addr));
-		//PSOCKET_OBJ temp_sock = pNproc->InUserVector(pNproc->FromClient);
 
 		if (pNproc->Recv_Size > 0)
-			cout << "받은 데이터 :" << pNproc->Buffer << endl;
+			printf("받은 데이터 : %s", pNproc->Buffer);
 
 		pNproc->pPacket.GetInit(pNproc->Buffer);
 
@@ -199,15 +204,16 @@ UINT WINAPI NetworkProcess::RecvProc(LPVOID lpParam)
 		WORD temp_com = pNproc->pPacket.GetWORD();
 		if (temp_com == USER_IN)
 		{
-			pNproc->CheckHeartBeat(pNproc->InUserVector(addr, pNproc->FromClient.sin_port, pNproc->pPacket.GetStr()));
-
+			PSOCKET_OBJ p_tempSock = pNproc->InUserVector(addr, pNproc->FromClient.sin_port, pNproc->pPacket.GetStr());
+			//pNproc->CheckHeartBeat(p_tempSock);
+			pNproc->SendGameRoomList(p_tempSock);
 		}
 		else
 		{
 			PSOCKET_OBJ p_tempSock = pNproc->SearchingInUserList(addr, pNproc->FromClient.sin_port);
 
 			if (p_tempSock != NULL)
-				pNproc->CommandProcess(p_tempSock, temp_com, pNproc->pPacket.GetStr());
+				pNproc->CommandProcess(p_tempSock, temp_com);
 		}
 
 	}
@@ -215,7 +221,7 @@ UINT WINAPI NetworkProcess::RecvProc(LPVOID lpParam)
 }
 
 
-void NetworkProcess::Disconnect(PSOCKET_OBJ p_SockObj, TCHAR* buf)
+void NetworkProcess::Disconnect(PSOCKET_OBJ p_SockObj, char* buf)
 {
 	//게임 객체 찾아서 지우기 작업 해야함
 	//이것도 새로 할것
@@ -233,31 +239,31 @@ void NetworkProcess::Disconnect(PSOCKET_OBJ p_SockObj, TCHAR* buf)
 		{
 			if (strcmp(pGameData->player1->ipAddr, p_SockObj->ipAddr) == 0)
 			{
-				SendPacket(pGameData->player2, GAME_RETIRE, NULL); //상대방이 기권했다고 알림
+				SendPacket(pGameData->player2, GAME_RETIRE, NULL, 0); //상대방이 기권했다고 알림
 				memset(pGameData, 0, sizeof(PLAY_GAME_DATA));
 			}
 			else if (strcmp(pGameData->player2->ipAddr, p_SockObj->ipAddr) == 0)
 			{
-				SendPacket(pGameData->player1, GAME_RETIRE, NULL); //상대방이 기권했다고 알림
+				SendPacket(pGameData->player1, GAME_RETIRE, NULL, 0); //상대방이 기권했다고 알림
 				memset(pGameData, 0, sizeof(PLAY_GAME_DATA));
 			}
 		}
 	}
 }
 
-void NetworkProcess::CommandProcess(PSOCKET_OBJ p_sock, WORD com, TCHAR* buf)
+void NetworkProcess::CommandProcess(PSOCKET_OBJ p_sock, WORD com)
 {
 	switch (com)
 	{
 
-	case USER_OUT: Disconnect(p_sock,buf);//접속 종료 프로세스
+	case USER_OUT: Disconnect(p_sock, pPacket.GetStr());//접속 종료 프로세스
 		break;
 
 	case GAME_ROOM_LIST:SendGameRoomList(p_sock);
 		break;
-	case JOIN_GAME: JoinGameRoom(p_sock, buf);
+	case JOIN_GAME: JoinGameRoom(p_sock, pPacket.GetWORD());
 		break;
-	case GAME_ROOM_MAKE:MakeGameRoom(p_sock, buf);
+	case GAME_ROOM_MAKE:MakeGameRoom(p_sock, pPacket.GetStr());
 		break;
 	case HEARTBEAT: CheckHeartBeat(p_sock);
 		break;
@@ -265,72 +271,98 @@ void NetworkProcess::CommandProcess(PSOCKET_OBJ p_sock, WORD com, TCHAR* buf)
 
 }
 
-void NetworkProcess::JoinGameRoom(PSOCKET_OBJ p_sock,TCHAR* buf)
+void NetworkProcess::JoinGameRoom(PSOCKET_OBJ p_sock,WORD buf)
 {
-	WORD gRoomNum = *(WORD*)buf;
-	PLAY_GAME_DATA* FindedGame = SearchGameOBJ(gRoomNum);
-	GameRoomMaster gRoomMaster;
+	
+	PLAY_GAME_DATA* FindedGame = SearchGameOBJ(buf);
+	
+	pPacket.Init();
+	pPacket.PutWORD(JOIN_GAME);
+	
 	if (FindedGame->game_master == 1)
 	{
-		strcpy(gRoomMaster.ip_addr, FindedGame->player1->ipAddr);
-		gRoomMaster.port = FindedGame->player1->iPort;
+		pPacket.PutWORD(FindedGame->player1->iPort);
+		pPacket.PutStr(FindedGame->player1->ipAddr,strlen(FindedGame->player1->ipAddr));
 
 	}
 	else
 	{
-		strcpy(gRoomMaster.ip_addr, FindedGame->player2->ipAddr);
-		gRoomMaster.port = FindedGame->player2->iPort;
+		pPacket.PutWORD(FindedGame->player2->iPort);
+		pPacket.PutStr(FindedGame->player2->ipAddr, strlen(FindedGame->player2->ipAddr));
 	}
-
-	SendPacket(p_sock, JOIN_GAME, (TCHAR *)(&gRoomMaster));
+	
+	pPacket.ClosePacket();
+	SendPacket(p_sock);
 }
 
 void NetworkProcess::SendGameRoomList(PSOCKET_OBJ p_sock)
 {
-	TCHAR buf[100];
-	*(WORD *)(&buf[0]) = HEAD;
-	*(WORD *)(&buf[(sizeof(WORD))]) = (WORD)0;
-	SendPacket(p_sock, GAME_ROOM_LIST, buf);
+
+	pPacket.Init();
+	pPacket.PutWORD(HEAD);
+	pPacket.PutWORD(RealRoom);
+	SendPacket(p_sock);
+	
+	
 	//반복문을 이용해서 방을 갯수만큼 끊어서 보낼것 방 최대 갯수는 50개
 	// 500> 방 하나 당 제목 60바이트 + 방넘버 2바이트 소모 5개 방을 보낼것
-	
-	for (int i = 0; i < lGameList.size();i += 5)
+	int listsize = lGameList.size();
+	for (int i = 0; i < listsize; i += 5)
 	{
-		TCHAR szBuf[200];
-		int offset = 0;
-		*(WORD *)(&szBuf[offset]) = BODY;
-		offset += sizeof(WORD);
-		SENDING_GAME_ROOM sendRoom[5];
-
-		for (int j = 0; j < 5;j++)
+		pPacket.Init();
+		pPacket.PutWORD(BODY);
+		pPacket.GameListPacketInit();
+		WORD bodyCount = 0;
+	
+		for (int j = 0; j < 5; j++)
 		{
-			if(lGameList.at(i+j)->use_obj =true)
+			if (lGameList.at(i + j)->use_obj == true)
 			{
-			sendRoom[j].game_number = lGameList.at(i+j)->game_number;
-			_tcscpy(sendRoom[j].title,lGameList.at(i + j)->title);
+				pPacket.PutWORD(lGameList.at(i + j)->game_number);
+				pPacket.PutStr(lGameList.at(i + j)->title, (strlen(lGameList.at(i + j)->title)+1));
+				bodyCount++;
 			}
 		}
 
-		memcpy(&szBuf[offset], sendRoom, sizeof(sendRoom));
-		offset += sizeof(sendRoom);
-		*(WORD *)(&szBuf[offset]) = (WORD)0;
-		SendPacket(p_sock, GAME_ROOM_LIST, szBuf);
+		if (bodyCount > 0)
+		{
+			pPacket.PutBodySize(bodyCount);
+			SendPacket(p_sock);
+		}
+
+
+		/*for (int j = 0; j < 5; j++)
+		{
+			if (lGameList.at(i + j)->use_obj == true)
+			{
+				*(WORD *)(&szBuf[offset]) = lGameList.at(i + j)->game_number;
+				offset += sizeof(WORD);
+				strcpy(&szBuf[offset], lGameList.at(i + j)->title);
+				offset += strlen(lGameList.at(i + j)->title);
+				bodyCount++;
+			}
+		}
+		if (bodyCount > 0)
+		{
+			*(WORD *)(&szBuf[2]) = bodyCount;
+
+			SendPacket(p_sock, GAME_ROOM_LIST, szBuf, offset);
+		}*/
 	}
-
-
-
 
 }
 
-void NetworkProcess::MakeGameRoom(PSOCKET_OBJ p_sock, TCHAR* title)
+
+
+void NetworkProcess::MakeGameRoom(PSOCKET_OBJ p_sock, char* title)
 {
 	//PSOCKET_OBJ가 유저이름도 갖고 있어야한다.
 	for (int i = 0; i < lGameList.size(); i++)
 	{
 		if (!lGameList.at(i)->use_obj)
 		{
-			_tcscpy(lGameList.at(i)->player1_name, p_sock->UserName);
-			_tcscpy(lGameList.at(i)->title, title);
+			strcpy(lGameList.at(i)->player1_name, p_sock->UserName);
+			strcpy(lGameList.at(i)->title, title);
 
 			lGameList.at(i)->player1 = p_sock;
 			lGameList.at(i)->use_obj = true;
@@ -370,7 +402,7 @@ void NetworkProcess::CheckHeartBeat(PSOCKET_OBJ p_sock)
 	}
 }
 
-BOOL NetworkProcess::SendPacket(PSOCKET_OBJ Client, WORD com, TCHAR* buf)
+BOOL NetworkProcess::SendPacket(PSOCKET_OBJ Client, WORD com, char* buf, WORD buf_size)
 {
 
 	SOCKADDR_IN ToClient;
@@ -380,8 +412,28 @@ BOOL NetworkProcess::SendPacket(PSOCKET_OBJ Client, WORD com, TCHAR* buf)
 
 	pPacket.Init();
 	pPacket.PutWORD(com);
-	pPacket.PutStr(buf);
-	pPacket.PutSize();
+	pPacket.PutStr(buf, buf_size);
+	
+
+	Send_Size = sendto(ServerSocket, (const char*)pPacket.GetSendBuffer(), BUFFER_SIZE, 0, (struct sockaddr*)&ToClient, sizeof(ToClient));
+
+	if (Send_Size == pPacket.m_iLen)
+	{
+		return true;
+	}
+
+	return false;
+}
+
+BOOL NetworkProcess::SendPacket(PSOCKET_OBJ Client)
+{
+
+	SOCKADDR_IN ToClient;
+	ToClient.sin_family = AF_INET;
+	ToClient.sin_addr.s_addr = inet_addr(Client->ipAddr);
+	ToClient.sin_port = Client->iPort;
+
+	
 
 	Send_Size = sendto(ServerSocket, (const char*)pPacket.GetSendBuffer(), BUFFER_SIZE, 0, (struct sockaddr*)&ToClient, sizeof(ToClient));
 

@@ -35,24 +35,27 @@ public:
 	void	PutBYTE(BYTE	bByte);
 	void    PutWORD(WORD	wWORD);
 	void    Putint(int      iint);
-	void	PutStr(TCHAR* sStr);
+	void	PutStr(char* sStr,WORD buf_size);
 	void	PutSize();
-
-	void    GetInit(TCHAR*    ib_Buffer);
+	void ClosePacket();
+	char*	PrintBuffer();
+	void	GameListPacketInit();
+	void	PutBodySize(WORD wWORD);
+	void    GetInit(char*    ib_Buffer);
 	BYTE	GetBYTE(void);
 	WORD	GetWORD(void);
 	int		GetInt(void);
-	TCHAR*	GetStr(void);
+	char*	GetStr(void);
 	WORD	GetSize(void);
 
-	TCHAR* GetSendBuffer(void) const;
+	char* GetSendBuffer(void) const;
 
 	int		m_iLen;
 
 
 private:
-	TCHAR	m_szBuffr[2000];
-	TCHAR*  m_rzBuffr;
+	char	m_szBuffr[2000];
+	char*  m_rzBuffr;
 
 };
 #endif

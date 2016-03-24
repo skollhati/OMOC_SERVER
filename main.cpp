@@ -7,12 +7,13 @@ UINT _tmain(int argc, TCHAR* argv[])
 
 	NetworkProcess pNetworkProc = NetworkProcess();
 	
-	Sleep(1000);
+	//Sleep(1000);
 	
 	pNetworkProc.StartServer();
+	
 	while (1)
 	{
-
+		Sleep(100);
 	}
 
 	return 0;

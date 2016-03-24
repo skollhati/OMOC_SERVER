@@ -24,7 +24,7 @@ typedef struct PLAY_GAME_PLAYER
 typedef struct SEDING_TASK
 {
 	sockaddr from_sock;
-	TCHAR* send_message;
+	char* send_message;
 }MESSAGE;
 
 class NetworkProcess
@@ -42,20 +42,22 @@ public:
 
 public:
 	void StartServer();
-	void CommandProcess(PSOCKET_OBJ p_sock, WORD com, TCHAR* buf);
+	void CommandProcess(PSOCKET_OBJ p_sock, WORD com);
 	PLAY_GAME_DATA * SearchGameOBJ(WORD roomNum);
-	BOOL SendPacket(PSOCKET_OBJ Client, WORD com, TCHAR* buf);
+	BOOL SendPacket(PSOCKET_OBJ Client, WORD com, char* buf,WORD buf_size);
 	
+	BOOL SendPacket(PSOCKET_OBJ Client);
+
 	void InitateHeartBeat();
-	void MakeGameRoom(PSOCKET_OBJ p_sock, TCHAR* title);
+	void MakeGameRoom(PSOCKET_OBJ p_sock, char* title);
 	void SendGameRoomList(PSOCKET_OBJ p_sock);
 	void CheckHeartBeat(PSOCKET_OBJ p_sock);
-	void Disconnect(PSOCKET_OBJ pSocktObj, TCHAR* buf);
+	void Disconnect(PSOCKET_OBJ pSocktObj, char* buf);
 	void IniSocketObj();
-	void JoinGameRoom(PSOCKET_OBJ p_sock, TCHAR* buf);
+	void JoinGameRoom(PSOCKET_OBJ p_sock, WORD buf);
 	
 	PSOCKET_OBJ SearchingInUserList(char* ipaddr,short port);
-	PSOCKET_OBJ InUserVector(char* ipAddr, short port,TCHAR* Uname);
+	PSOCKET_OBJ InUserVector(char* ipAddr, short port, char* Uname);
 
 public:
 	WSADATA wsaData;
@@ -69,7 +71,7 @@ public:
 	int FromClient_Size;
 	int Count;
 
-	TCHAR Buffer[BUFFER_SIZE];
+	char Buffer[BUFFER_SIZE];
 	short ServerPort = 8800;
 
 private:
@@ -86,6 +88,8 @@ private:
 	HANDLE hRecvThread;
 	LARGE_INTEGER liDueTime;
 	PacketSet pPacket;
+
+	WORD RealRoom=0;
 	
 };
 
